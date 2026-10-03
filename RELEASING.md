@@ -29,7 +29,7 @@ Pour **corriger seulement le texte** de la Release (sans refabriquer) : `npm run
 
 La Release `v1.0.0` actuelle a été créée avant la correction de l'identité et des chemins. Pour la remplacer proprement :
 ```bash
-cd /Users/klausvanoosthuyse/Downloads/bullo
+cd ~/Downloads/bullo
 git add .
 git commit -m "Procédure de publication automatisée"
 git push
