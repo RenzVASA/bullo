@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bullo, espace de concentration neuro-inclusif pour Mac</title>
+<meta name="description" content="Bullo aide à capturer, comprendre et retenir ses cours. Pensé pour les profils dyslexiques, TDAH, autistes ou fatigués. Gratuit, libre, 100 % local.">
+<meta property="og:title" content="Bullo, ton espace de concentration">
+<meta property="og:description" content="Capture, résumé, rappels, fond sonore et accessibilité. Gratuit, libre, 100 % local, pour Mac.">
+<meta property="og:image" content="social-preview.png">
+<link rel="icon" href="logo.png" type="image/png">
+<style>
+:root{--bg:#f1f2fb;--panel:#fff;--ink:#12183a;--mute:#4f5679;--line:rgba(18,24,58,.14);--accent:#5b4bf5;--accent2:#0e9fd8;--on:#fff;--deep:#090e2b;
+  --layer1:color-mix(in srgb,var(--accent) 17%,var(--bg));--layer2:color-mix(in srgb,var(--accent) 9%,var(--bg))}
+@media (prefers-color-scheme:dark){:root{--bg:#090e2b;--panel:#131b48;--ink:#e9eeff;--mute:#a9b2db;--line:rgba(160,175,255,.2);--accent:#9a90ff;--accent2:#46cdfb;--on:#090e2b}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 1.0625rem/1.65 ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+.wrap{width:min(1080px,100% - 40px);margin-inline:auto}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:6px}
+.skip{position:absolute;left:-999px}.skip:focus{left:12px;top:12px;background:var(--panel);padding:8px 14px;border-radius:99px;z-index:9}
+
+header.top{display:flex;align-items:center;justify-content:space-between;padding:20px 0}
+.brand{display:flex;align-items:center;gap:12px;font-weight:800;font-size:1.35rem;letter-spacing:-.03em;color:var(--ink);text-decoration:none}
+.brand img{width:40px;height:40px;border-radius:11px}
+nav.links{display:flex;gap:6px;align-items:center}
+nav.links a{color:var(--mute);text-decoration:none;padding:8px 14px;border-radius:99px;font-weight:600;font-size:.95rem}
+nav.links a:hover{background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--ink)}
+
+.btn{display:inline-flex;align-items:center;gap:10px;border-radius:99px;padding:14px 26px;font:700 1.05rem/1 inherit;text-decoration:none;border:1.5px solid transparent;cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--on);box-shadow:0 10px 24px -10px var(--accent)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.ghost{border-color:var(--line);color:var(--ink);background:var(--panel)}
+.btn.ghost:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Hero */
+.hero{display:grid;grid-template-columns:1fr 1.05fr;gap:56px;align-items:center;padding:48px 0 88px}
+h1{font-size:clamp(2.4rem,5.2vw,4rem);line-height:1.04;letter-spacing:-.045em;margin:0 0 .45em;font-weight:800}
+.lead{font-size:1.2rem;color:var(--mute);max-width:34ch;margin:0 0 1.6em}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:18px}
+.meta{color:var(--mute);font-size:.92rem;margin:0}
+.wave{display:inline-flex;align-items:center;gap:3px;height:20px;vertical-align:middle;margin-right:10px}
+.wave i{display:block;width:3px;height:6px;border-radius:3px;background:var(--accent2);animation:wv 1.3s ease-in-out infinite}
+.wave i:nth-child(2){animation-delay:-.4s}.wave i:nth-child(3){animation-delay:-.8s}.wave i:nth-child(4){animation-delay:-.2s}
+@keyframes wv{50%{height:20px}}
+/* La pile de feuilles du logo : trois couches décalées derrière la capture */
+.stack{position:relative;padding:0 0 34px}
+.stack::before,.stack::after{content:"";position:absolute;inset:0 0 0 0;border-radius:28px;border:1px solid var(--line)}
+.stack::before{background:var(--layer2);transform:translate(0,30px) scale(.9)}
+.stack::after{background:var(--layer1);transform:translate(0,16px) scale(.95)}
+.shot{position:relative;z-index:1;display:block;width:100%;height:auto;border-radius:24px;border:1px solid var(--line);box-shadow:0 30px 60px -28px rgba(18,24,58,.55)}
+
+section{padding:72px 0}
+h2{font-size:clamp(1.7rem,3.4vw,2.5rem);letter-spacing:-.035em;line-height:1.1;margin:0 0 .5em}
+.sub{color:var(--mute);max-width:56ch;margin:0 0 2.2em}
+
+/* Trois gestes : une vraie suite, donc numérotée */
+.steps{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;counter-reset:s}
+.steps li{counter-increment:s;background:var(--panel);border:1px solid var(--line);border-radius:26px;padding:28px 26px}
+.steps li::before{content:counter(s);display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--accent);color:var(--on);font-weight:800;margin-bottom:18px}
+.steps h3{margin:0 0 .35em;font-size:1.3rem;letter-spacing:-.02em}
+.steps p{margin:0;color:var(--mute)}
+
+/* Accessibilité : démo vivante */
+.access{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start}
+.tryit{background:var(--panel);border:1px solid var(--line);border-radius:26px;padding:24px;--fs:1.0625rem;--lh:1.65}
+.tryit label{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 14px;color:var(--mute);font-weight:600}
+.tryit input[type=range]{accent-color:var(--accent);width:55%}
+.tryit .sample{margin:18px 0 0;padding:18px;border-radius:18px;background:color-mix(in srgb,var(--accent) 7%,transparent);font-size:var(--fs);line-height:var(--lh);max-width:none}
+.tryit.hc{--panel:#fff;--ink:#000;--mute:#111;--accent:#0000c8;--line:#000;color:#000;background:#fff}
+.tryit.hc .sample{background:#fff;border:2px solid #000;color:#000}
+.tryit .chk{display:flex;gap:10px;align-items:center;justify-content:flex-start}
+.tryit .chk input{width:20px;height:20px;accent-color:var(--accent)}
+.points{list-style:none;padding:0;margin:0;display:grid;gap:14px}
+.points li{padding-left:34px;position:relative}
+.points li::before{content:"";position:absolute;left:0;top:.45em;width:18px;height:18px;border-radius:50%;background:color-mix(in srgb,var(--accent) 22%,transparent);box-shadow:inset 0 0 0 5px var(--accent)}
+.points b{display:block}.points span{color:var(--mute)}
+
+.shots{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+.shots figure{margin:0}.shots img{width:100%;height:auto;border-radius:20px;border:1px solid var(--line);display:block}
+.shots figcaption{color:var(--mute);font-size:.92rem;margin-top:10px}
+.note{color:var(--mute);font-size:.9rem;margin-top:18px}
+
+/* Installer */
+.install{background:var(--deep);color:#e9eeff;border-radius:34px;padding:56px clamp(24px,5vw,64px)}
+.install h2{color:#fff}.install .sub{color:#b9c2ea}
+.istep{display:grid;grid-template-columns:44px 1fr;gap:18px;margin:0 0 26px}
+.istep>b{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:#9a90ff;color:#090e2b;font-size:1.1rem}
+.istep h3{margin:0 0 .2em;font-size:1.2rem;color:#fff}.istep p{margin:0;color:#b9c2ea}
+.code{max-width:100%;box-sizing:border-box;flex-wrap:wrap;display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:12px;background:#050818;border:1px solid rgba(160,175,255,.25);border-radius:16px;padding:12px 12px 12px 18px;font:500 .95rem ui-monospace,SFMono-Regular,Menlo,monospace;color:#e9eeff;overflow-x:auto}
+.code button{flex:none;border:0;border-radius:99px;padding:9px 16px;font:700 .85rem inherit;background:#9a90ff;color:#090e2b;cursor:pointer}
+.install .btn.primary{background:#9a90ff;color:#090e2b;box-shadow:none}
+
+details{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:6px 22px;margin:0 0 12px}
+summary{cursor:pointer;font-weight:700;padding:14px 0;list-style:none;display:flex;justify-content:space-between;gap:12px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-size:1.4rem;line-height:1;color:var(--accent)}
+details[open] summary::after{content:"–"}
+details p{margin:0 0 16px;color:var(--mute)}
+
+footer{padding:48px 0 64px;color:var(--mute);font-size:.95rem;display:flex;flex-wrap:wrap;gap:12px 28px;justify-content:space-between;border-top:1px solid var(--line);margin-top:56px}
+footer a{color:var(--mute)}
+
+@media (max-width:860px){.install>*,.hero>*,.access>*{min-width:0}.code code,.code span{overflow-wrap:anywhere;word-break:break-all}.hero,.access,.shots{grid-template-columns:1fr}.steps{grid-template-columns:1fr}.hero{padding-bottom:56px;gap:36px}nav.links a:not(.keep){display:none}.stack{margin-bottom:10px}}
+@media (prefers-reduced-motion:reduce){.wave i{animation:none;height:12px}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<a class="skip" href="#contenu">Aller au contenu</a>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="#"><img src="logo.png" alt="" width="40" height="40">Bullo</a>
+    <nav class="links" aria-label="Navigation principale">
+      <a href="#adapte">Accessibilité</a><a href="#installer">Installer</a><a href="#faq">Questions</a>
+      <a class="keep" href="https://github.com/RenzVASA/bullo">GitHub</a>
+    </nav>
+  </header>
+
+  <main id="contenu">
+    <div class="hero">
+      <div>
+        <h1>Étudier sans lutter contre ton cerveau.</h1>
+        <p class="lead">Bullo capture tes cours, en tire l'essentiel et te le rappelle au bon moment, dans une interface qui s'adapte à toi.</p>
+        <div class="cta">
+          <a class="btn primary" id="dl" href="https://github.com/RenzVASA/bullo/releases/latest">Télécharger pour Mac</a>
+          <a class="btn ghost" href="#installer">Comment l'installer</a>
+        </div>
+        <p class="meta"><span class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span id="ver">Mac Apple Silicon</span> · gratuit · libre (MIT) · 100 % local</p>
+      </div>
+      <div class="stack"><img class="shot" src="accueil-clair.png" alt="Écran d'accueil de Bullo avec le lecteur de fond sonore en bas" width="1100" height="760"></div>
+    </div>
+
+    <section aria-labelledby="t-gestes" style="padding-top:24px">
+      <h2 id="t-gestes">Trois gestes, pas plus.</h2>
+      <p class="sub">Pas de dossier à ranger ni de système à apprendre. Tu déposes, Bullo s'occupe du reste.</p>
+      <ol class="steps">
+        <li><h3>Capture</h3><p>Parle, écris, ou dépose un PDF, un Word ou une image. La transcription se fait sur ton Mac.</p></li>
+        <li><h3>Comprends</h3><p>Un résumé clair, les devoirs et les dates repérés, et les grosses tâches découpées en petites étapes.</p></li>
+        <li><h3>Retiens</h3><p>Des rappels doux, la lecture à voix haute et une recherche dans tous tes cours.</p></li>
+      </ol>
+    </section>
+
+    <section id="adapte" aria-labelledby="t-adapte">
+      <h2 id="t-adapte">Une interface qui se plie à toi.</h2>
+      <p class="sub">Essaie ici, avec les mêmes réglages que dans l'application.</p>
+      <div class="access">
+        <div class="tryit" id="try">
+          <label for="r-size">Taille du texte <input id="r-size" type="range" min="16" max="28" value="17"></label>
+          <label for="r-lh">Interligne <input id="r-lh" type="range" min="1.3" max="2.2" step=".05" value="1.65"></label>
+          <label class="chk"><input id="c-hc" type="checkbox"> Contraste élevé</label>
+          <p class="sample">Lire demande déjà beaucoup d'énergie. Ici, tu règles la taille, l'espace entre les lignes et le contraste jusqu'à ce que le texte te laisse tranquille.</p>
+        </div>
+        <ul class="points">
+          <li><b>Polices pour la dyslexie</b><span>OpenDyslexic, Lexend, Atkinson Hyperlegible, Verdana, Arial, Comic Sans.</span></li>
+          <li><b>Thèmes et couleurs</b><span>Clair, sombre, thème doux, mode daltonien, contraste élevé.</span></li>
+          <li><b>Mouvement réduit</b><span>Plus aucune animation si elles te fatiguent.</span></li>
+          <li><b>Bien-être intégré</b><span>Parking de pensées, respiration guidée, pauses douces.</span></li>
+          <li><b>Fond sonore</b><span>Des sons doux générés par Bullo, ou le contrôle de ta musique.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section aria-labelledby="t-vues">
+      <h2 id="t-vues">À quoi ça ressemble.</h2>
+      <div class="shots">
+        <figure><img src="outils-sombre.png" alt="Les outils de Bullo en thème sombre" loading="lazy"><figcaption>Outils : corriger, simplifier, décomposer.</figcaption></figure>
+        <figure><img src="bien-etre-clair.png" alt="La page Bien-être de Bullo" loading="lazy"><figcaption>Bien-être : parking de pensées et respiration.</figcaption></figure>
+      </div>
+      <p class="note">Captures d'écran du simulateur de l'interface.</p>
+    </section>
+
+    <section id="installer" aria-labelledby="t-inst" style="padding:24px 0 72px">
+      <div class="install">
+        <h2 id="t-inst">Installer Bullo.</h2>
+        <p class="sub">Trois minutes. Pour Mac avec puce Apple (M1 et suivantes).</p>
+        <div class="istep"><b>1</b><div><h3>Télécharge</h3><p>Le fichier <code>.dmg</code> de la dernière version.</p><p style="margin-top:14px"><a class="btn primary" id="dl2" href="https://github.com/RenzVASA/bullo/releases/latest">Télécharger Bullo</a></p></div></div>
+        <div class="istep"><b>2</b><div><h3>Glisse</h3><p>Ouvre le fichier et glisse Bullo dans le dossier Applications.</p></div></div>
+        <div class="istep"><b>3</b><div><h3>Autorise, une seule fois</h3><p>Bullo n'est pas encore signé par Apple, donc macOS le croit « endommagé ». Ouvre le Terminal, colle cette ligne, puis ouvre Bullo.</p>
+          <div class="code"><code id="cmd">xattr -cr /Applications/Bullo.app</code><button type="button" id="copy">Copier</button></div></div></div>
+      </div>
+    </section>
+
+    <section id="faq" aria-labelledby="t-faq" style="padding-top:0">
+      <h2 id="t-faq">Questions fréquentes.</h2>
+      <details><summary>Où vont mes données ?</summary><p>Nulle part ailleurs que sur ton ordinateur. Notes, enregistrements et réglages restent chez toi. La sauvegarde Google Drive est facultative et utilise ton propre compte.</p></details>
+      <details><summary>Pourquoi cette ligne dans le Terminal ?</summary><p>Pour qu'une application soit ouverte sans avertissement, Apple demande une signature payante (99 $ par an). Bullo est gratuit et pas encore signé. La commande retire seulement l'étiquette « téléchargé depuis Internet » ; le fichier n'est pas modifié. Tu peux vérifier le code sur GitHub.</p></details>
+      <details><summary>Faut-il internet ?</summary><p>Non pour l'essentiel. Le résumé et la transcription se font sur ton Mac avec Whisper et Ollama, à installer une fois (le guide est sur GitHub). Internet sert à installer ces outils et, si tu le choisis, à sauvegarder sur Google Drive.</p></details>
+      <details><summary>Et sur Windows ou Linux ?</summary><p>Pas pour l'instant : Bullo est écrit pour Mac Apple Silicon. Une version pour d'autres systèmes fait partie des idées de la feuille de route.</p></details>
+      <details><summary>C'est une version finie ?</summary><p>C'est une version 1.0 : testée surtout par son auteur, avec des fonctions propres au Mac encore en validation. Si quelque chose ne marche pas, une « Issue » sur GitHub suffit, avec ce que tu as vu à l'écran.</p></details>
+      <details><summary>Qui a fait Bullo ?</summary><p>Vibe codé par Renz-VASA, avec un peu d'intelligence artificielle. Le projet est libre, sous licence MIT.</p></details>
+    </section>
+  </main>
+
+  <footer>
+    <span>Bullo, vibe codé par Renz-VASA avec un peu d'IA. Licence MIT.</span>
+    <span><a href="https://github.com/RenzVASA/bullo">Code source</a> · <a href="https://github.com/RenzVASA/bullo/releases">Versions</a> · <a href="https://github.com/RenzVASA/bullo/issues/new/choose">Signaler un bug</a> · <a href="https://github.com/RenzVASA/bullo/blob/main/ROADMAP.md">Feuille de route</a></span>
+  </footer>
+</div>
+<script>
+// Version et lien direct du .dmg, lus depuis GitHub. Sans réponse, les boutons mènent à la page des versions.
+(async () => {
+  try {
+    const r = await fetch("https://api.github.com/repos/RenzVASA/bullo/releases/latest", { headers: { Accept: "application/vnd.github+json" } });
+    if (!r.ok) return;
+    const d = await r.json(), a = (d.assets || []).find(x => /\.dmg$/i.test(x.name));
+    if (a) { document.querySelectorAll("#dl,#dl2").forEach(l => l.href = a.browser_download_url); }
+    const v = String(d.tag_name || "").replace(/^v/, "");
+    if (v) document.getElementById("ver").textContent = "Version " + v + (a ? " · " + (a.size / 1048576).toFixed(1).replace(".", ",") + " Mo" : "") + " · Mac Apple Silicon";
+  } catch {}
+})();
+const t = document.getElementById("try");
+const upd = () => { t.style.setProperty("--fs", document.getElementById("r-size").value / 16 + "rem"); t.style.setProperty("--lh", document.getElementById("r-lh").value); t.classList.toggle("hc", document.getElementById("c-hc").checked); };
+["r-size", "r-lh", "c-hc"].forEach(i => document.getElementById(i).addEventListener("input", upd)); upd();
+document.getElementById("copy").addEventListener("click", async e => {
+  const b = e.currentTarget, txt = document.getElementById("cmd").textContent;
+  try { await navigator.clipboard.writeText(txt); b.textContent = "Copié"; } catch { const s = getSelection(), r = document.createRange(); r.selectNodeContents(document.getElementById("cmd")); s.removeAllRanges(); s.addRange(r); b.textContent = "Sélectionné : Cmd+C"; }
+  setTimeout(() => b.textContent = "Copier", 2200);
+});
+</script>
+</body>
+</html>
