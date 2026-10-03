@@ -16,6 +16,7 @@ Tout se fait depuis le **Terminal**, dans le dossier du projet. La publication e
 | 6 | Vérifie la page des Releases | https://github.com/RenzVASA/bullo/releases |
 
 Pour **voir ce que ferait le script sans rien publier** : `npm run release -- --dry`.
+Pour **corriger seulement le texte** de la Release (sans refabriquer) : `npm run release -- --notes`.
 
 ### Ce que vérifie le script avant de publier
 1. Tes changements sont sauvegardés (`git commit`) et envoyés (`git push`). Sinon il s'arrête et te dit quoi faire.
@@ -69,9 +70,9 @@ Si tu supprimes une Release à la main, supprime aussi son étiquette : **Code >
 | `Aucune section « ## 1.1.0 » dans CHANGELOG.md` | Tu as oublié l'étape 2 | Ajoute la section |
 | `Ton nom d'utilisateur est encore dans l'application` | Chemin personnel resté dans le binaire | Copie-moi les 3 lignes affichées |
 | `gh: not logged in` | Session GitHub expirée | `gh auth login` |
-| macOS : « Bullo est endommagé » (chez toi ou un visiteur) | App non signée téléchargée par le navigateur | `xattr -cr /Applications/Bullo.app` |
-| macOS : « développeur non identifié » | Idem | Clic droit sur Bullo > Ouvrir > Ouvrir |
+| macOS : « Bullo est endommagé » (chez toi ou un visiteur) | App non signée téléchargée par un navigateur : macOS pose une étiquette de quarantaine. Le fichier est intact. | Annuler (pas « Corbeille »), puis `xattr -cr /Applications/Bullo.app` |
+| macOS : « développeur non identifié » | Idem sur un macOS plus ancien | Clic droit sur Bullo > Ouvrir > Ouvrir, sinon la commande ci-dessus |
 
 ## Pour aller plus loin (plus tard)
-- **Signature et notarisation Apple** (compte développeur payant, 99 $/an) : supprime les avertissements de macOS. À prévoir si Bullo a des utilisateurs réguliers.
+- **Signature et notarisation Apple** (compte développeur payant, 99 $/an) : supprime le message « endommagé » et l'étape `xattr` pour tes visiteurs. À prévoir si Bullo a des utilisateurs réguliers.
 - **Publication automatique** par GitHub (`.github/workflows/release.yml`) : se déclenche quand tu envoies une étiquette (`git tag v1.1.0 && git push --tags`). Non testée : garde `npm run release` comme méthode principale.

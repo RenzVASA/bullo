@@ -5,11 +5,14 @@
 #   2. fabrique l'application (.dmg) SANS aucun chemin de ton ordinateur
 #   3. vérifie qu'aucune trace de ton nom d'utilisateur Mac n'est dans l'application
 #   4. crée (ou remplace) la Release GitHub avec le .dmg, le texte du CHANGELOG et l'empreinte SHA-256
-# Option :  npm run release -- --dry   (montre ce qui serait fait, sans rien fabriquer ni publier)
+# Options :  npm run release -- --dry     (montre ce qui serait fait, sans rien fabriquer ni publier)
+#            npm run release -- --notes   (met à jour seulement le texte de la Release, sans refabriquer)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-DRY=0; [ "${1:-}" = "--dry" ] && DRY=1
+DRY=0; NOTES_ONLY=0
+[ "${1:-}" = "--dry" ] && DRY=1
+[ "${1:-}" = "--notes" ] && NOTES_ONLY=1
 say()  { printf '\n\033[1m%s\033[0m\n' "$*"; }
 fail() { printf '\n\033[31mErreur : %s\033[0m\n' "$*" >&2; exit 1; }
 run()  { if [ "$DRY" = 1 ]; then echo "[simulation] $*"; else "$@"; fi; }
@@ -39,13 +42,25 @@ awk -v v="$VERSION" '$0 ~ "^## " v {f=1; next} f && /^## /{exit} f' CHANGELOG.md
 cat >> "$NOTES" <<'TXT'
 
 ---
-**Installer** : ouvre le `.dmg`, glisse **Bullo** dans **Applications**, puis **clic droit sur Bullo > Ouvrir > Ouvrir** (l'application n'est pas encore signée par Apple, macOS demande une confirmation une seule fois).
+**Installer** : ouvre le `.dmg` et glisse **Bullo** dans **Applications**. Puis, **une seule fois**, ouvre le Terminal et lance :
 
-Si macOS dit que l'application est « endommagée », ouvre le Terminal et lance : `xattr -cr /Applications/Bullo.app`
+```
+xattr -cr /Applications/Bullo.app
+```
+
+Ensuite ouvre Bullo normalement. (L'application n'est pas encore signée par Apple : sans cette ligne, macOS affiche « Bullo est endommagé » alors que le fichier est intact. La commande retire seulement l'étiquette « téléchargé depuis Internet ».)
 
 Mac Apple Silicon (M1 et suivants) uniquement.
 TXT
 echo "Texte de la Release :"; sed 's/^/   | /' "$NOTES"
+
+if [ "$NOTES_ONLY" = 1 ]; then
+  say "Mise à jour du texte de la Release $TAG (sans refabriquer)"
+  OLD_SHA=$(gh release view "$TAG" --json body --jq .body 2>/dev/null | grep -o 'SHA-256 du .dmg : `[0-9a-f]*`' || true)
+  [ -n "$OLD_SHA" ] && printf '\nEmpreinte %s\n' "$OLD_SHA" >> "$NOTES"
+  gh release edit "$TAG" --title "Bullo $VERSION" --notes-file "$NOTES"
+  rm -f "$NOTES"; echo "OK : texte mis à jour."; exit 0
+fi
 
 # --- 3. Fabrication, sans chemins personnels ---
 say "Fabrication de l'application (3 à 5 minutes)"

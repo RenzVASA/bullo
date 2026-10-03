@@ -40,9 +40,11 @@
 
 1. Va dans [**Releases**](../../releases/latest) et télécharge le fichier **`Bullo_…_aarch64.dmg`**.
 2. Ouvre-le et glisse **Bullo** dans **Applications**.
-3. Premier lancement : **clic droit sur Bullo > Ouvrir > Ouvrir**. (Bullo n'est pas encore signé par Apple, macOS demande donc une confirmation une seule fois.)
-
-Si macOS affiche « Bullo est endommagé », ouvre le Terminal et lance `xattr -cr /Applications/Bullo.app`, puis rouvre l'app.
+3. **Une seule fois**, ouvre le Terminal et colle cette ligne, puis ouvre Bullo normalement :
+   ```bash
+   xattr -cr /Applications/Bullo.app
+   ```
+   Bullo n'est pas encore signé par Apple : sans cette ligne, macOS affiche « Bullo est endommagé » alors que le fichier est intact. La commande retire seulement l'étiquette de « téléchargé depuis Internet ».
 
 Ensuite Bullo te guide : il demande l'accès au micro, et propose d'installer lui-même les outils qui lui manquent (FFmpeg, Whisper, Tesseract) via [Homebrew](https://brew.sh).
 

@@ -90,7 +90,7 @@ npm run release                  # fabrique, contrôle, publie
 ```
 `npm run release` fabrique l'application sans aucun chemin de ton ordinateur, vérifie qu'aucun nom personnel n'est dedans, puis crée la Release avec le `.dmg`.
 
-**Application non signée :** sans compte développeur Apple (99 $/an), macOS affiche « Bullo ne peut pas être ouvert » au premier lancement. Mode d'emploi pour les utilisateurs : *clic droit sur Bullo > Ouvrir > Ouvrir*. Si macOS dit « endommagée » : `xattr -cr /Applications/Bullo.app`. Le script ajoute ces phrases dans le texte de la Release.
+**Application non signée :** sans compte développeur Apple (99 $/an), macOS affiche « Bullo est endommagé » après un téléchargement par navigateur (le fichier est intact). Étape d'installation à donner aux utilisateurs, une seule fois : `xattr -cr /Applications/Bullo.app`. Le script l'ajoute dans le texte de la Release.
 
 ## 10. Après la publication
 - Ajoute un lien « Télécharger » dans le README vers `Releases > Latest`.
