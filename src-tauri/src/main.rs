@@ -127,11 +127,23 @@ async fn save_audio(app: AppHandle, req: Request<'_>) -> Result<String, String> 
     Ok(p.to_string_lossy().into_owned())
 }
 
+
+// Message précis selon la vraie cause : Ollama éteint, modèle absent, ou délai dépassé.
+fn ollama_err(model: &str, er: ureq::Error) -> String {
+    match er {
+        ureq::Error::Status(404, _) => format!("Le modèle de résumé « {model} » n'est pas téléchargé. Ouvre Réglages > Vérifier les outils, puis « Télécharger »."),
+        ureq::Error::Status(c, _) => format!("Ollama a répondu une erreur ({c}). Relance Ollama puis réessaie."),
+        ureq::Error::Transport(t) if t.to_string().to_lowercase().contains("timed out") => "Le résumé prend trop de temps (plus de 5 minutes). Essaie avec un texte plus court.".to_string(),
+        ureq::Error::Transport(_) => "Ollama ne répond pas. Ouvre l'application Ollama, puis réessaie (Réglages > Vérifier les outils).".to_string(),
+    }
+}
+
 // ffmpeg (conversion 16 kHz mono) puis whisper.cpp, 100 % local. Thread dédié : l'UI ne fige jamais.
 #[tauri::command]
 async fn transcribe(path: String) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let wav = format!("{path}.wav");
+        if !std::path::Path::new(&whisper_model()).exists() { return Err("Le modèle de transcription (Whisper) n'est pas installé. Ouvre Réglages > Vérifier les outils, puis « Télécharger ».".to_string()); }
         let ff = Command::new("ffmpeg").env("PATH", PATH_ENV)
             .args(["-y", "-i", &path, "-ar", "16000", "-ac", "1", &wav]).output()
             .map_err(|_| "ffmpeg introuvable. Installe-le avec : brew install ffmpeg".to_string())?;
@@ -159,7 +171,7 @@ async fn summarize(text: String) -> Result<serde_json::Value, String> {
         let agent = ureq::AgentBuilder::new().timeout(std::time::Duration::from_secs(300)).build();
         let r: serde_json::Value = agent.post("http://localhost:11434/api/generate")
             .send_json(serde_json::json!({ "model": model, "prompt": prompt, "stream": false, "format": "json", "keep_alive": "30s" }))
-            .map_err(|_| "Ollama ne répond pas. Lance-le, puis : ollama pull qwen2.5:7b".to_string())?
+            .map_err(|er| ollama_err(&model, er))?
             .into_json().map_err(e)?;
         serde_json::from_str(r["response"].as_str().unwrap_or("{}")).map_err(e)
     }).await.map_err(e)?
@@ -182,7 +194,7 @@ async fn assist(mode: String, text: String) -> Result<String, String> {
         let agent = ureq::AgentBuilder::new().timeout(std::time::Duration::from_secs(300)).build();
         let r: serde_json::Value = agent.post("http://localhost:11434/api/generate")
             .send_json(serde_json::json!({ "model": model, "prompt": format!("{instr}\n\nTexte :\n{text}"), "stream": false, "keep_alive": "30s" }))
-            .map_err(|_| "Ollama ne répond pas. Lance-le, puis : ollama pull qwen2.5:7b".to_string())?
+            .map_err(|er| ollama_err(&model, er))?
             .into_json().map_err(e)?;
         Ok(r["response"].as_str().unwrap_or("").trim().to_string())
     }).await.map_err(e)?
@@ -999,7 +1011,7 @@ async fn pick(kind: String) -> Result<String, String> {
 }
 
 #[derive(Serialize)]
-struct DependencyStatus { id: String, name: String, ok: bool, install: bool }
+struct DependencyStatus { id: String, name: String, ok: bool, install: bool, hint: String }
 
 // Tesseract est considéré prêt seulement si la langue française est disponible.
 fn tesseract_ok() -> bool {
@@ -1007,17 +1019,75 @@ fn tesseract_ok() -> bool {
         .map(|o| o.status.success() && String::from_utf8_lossy(&o.stdout).lines().any(|l| l.trim() == "fra")).unwrap_or(false)
 }
 
+
+fn ollama_tags() -> Option<serde_json::Value> {
+    ureq::AgentBuilder::new().timeout(std::time::Duration::from_secs(2)).build()
+        .get("http://localhost:11434/api/tags").call().ok()?.into_json().ok()
+}
+fn ollama_has_model() -> bool {
+    let want = ollama_model();
+    let base = want.split(':').next().unwrap_or("").to_string();
+    ollama_tags().and_then(|t| t["models"].as_array().map(|a| a.iter().any(|m| {
+        let n = m["name"].as_str().unwrap_or("");
+        n == want || (!want.contains(':') && n.split(':').next() == Some(base.as_str()))
+    }))).unwrap_or(false)
+}
+
+// Téléchargement d'un gros fichier vers un fichier temporaire, puis renommage (pas de fichier à moitié téléchargé).
+fn download_to(url: &str, dest: &str) -> Result<(), String> {
+    let dest = std::path::PathBuf::from(dest);
+    if let Some(d) = dest.parent() { fs::create_dir_all(d).map_err(e)?; }
+    let tmp = dest.with_extension("part");
+    let resp = ureq::AgentBuilder::new().timeout_connect(std::time::Duration::from_secs(15)).timeout_read(std::time::Duration::from_secs(60)).build()
+        .get(url).call().map_err(|_| "Téléchargement impossible : vérifie ta connexion internet puis réessaie.".to_string())?;
+    let mut f = fs::File::create(&tmp).map_err(e)?;
+    let r = std::io::copy(&mut resp.into_reader(), &mut f);
+    drop(f);
+    if let Err(er) = r { let _ = fs::remove_file(&tmp); return Err(format!("Téléchargement interrompu : {er}")); }
+    fs::rename(&tmp, &dest).map_err(e)
+}
+
+#[derive(Serialize)]
+struct UpdateInfo { current: String, latest: String, newer: bool, url: String, notes: String }
+
+fn ver_parts(v: &str) -> Vec<u64> { v.trim().trim_start_matches('v').split('.').map(|p| p.chars().take_while(|c| c.is_ascii_digit()).collect::<String>().parse().unwrap_or(0)).collect() }
+
+// Interroge GitHub (liste publique des versions). Aucune donnée n'est envoyée, à part la requête elle-même.
+#[tauri::command]
+async fn check_update(current: String) -> Result<UpdateInfo, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let r: serde_json::Value = ureq::AgentBuilder::new().timeout(std::time::Duration::from_secs(8)).build()
+            .get("https://api.github.com/repos/RenzVASA/bullo/releases/latest")
+            .set("User-Agent", "Bullo-update-check").set("Accept", "application/vnd.github+json").call()
+            .map_err(|_| "Impossible de joindre GitHub (pas d'internet ?).".to_string())?
+            .into_json().map_err(e)?;
+        let latest = r["tag_name"].as_str().unwrap_or("").trim_start_matches('v').to_string();
+        if latest.is_empty() { return Err("Aucune version publiée pour l'instant.".into()); }
+        let (a, b) = (ver_parts(&latest), ver_parts(&current));
+        let n = a.len().max(b.len());
+        let pad = |v: &Vec<u64>| { let mut v = v.clone(); v.resize(n, 0); v };
+        let newer = pad(&a) > pad(&b);
+        let url = r["html_url"].as_str().filter(|u| u.starts_with("https://github.com/RenzVASA/bullo/")).unwrap_or("https://github.com/RenzVASA/bullo/releases/latest").to_string();
+        let notes: String = r["body"].as_str().unwrap_or("").chars().take(500).collect();
+        Ok(UpdateInfo { current, latest, newer, url, notes })
+    }).await.map_err(e)?
+}
+
 #[tauri::command]
 fn check_installation() -> Result<Vec<DependencyStatus>, String> {
     let has = |cmd: &str| Command::new("sh").env("PATH", PATH_ENV).args(["-c", &format!("command -v {cmd}")]).output().map(|x| x.status.success()).unwrap_or(false);
     let model = whisper_model();
+    let oll = ollama_tags().is_some();
+    let oll_model = oll && ollama_has_model();
     Ok(vec![
-        DependencyStatus{id:"poppler".into(),name:"Poppler / pdftotext (PDF)".into(),ok:has("pdftotext"),install:true},
-        DependencyStatus{id:"textutil".into(),name:"textutil (Word .docx, macOS)".into(),ok:has("textutil"),install:false},
-        DependencyStatus{id:"tesseract".into(),name:"Tesseract + français (texte des images)".into(),ok:tesseract_ok(),install:true},
-        DependencyStatus{id:"ffmpeg".into(),name:"FFmpeg (audio)".into(),ok:has("ffmpeg"),install:true},
-        DependencyStatus{id:"whisper".into(),name:"whisper-cli (transcription locale)".into(),ok:has("whisper-cli"),install:true},
-        DependencyStatus{id:"whisper-model".into(),name:format!("Modèle Whisper ({model})"),ok:std::path::Path::new(&model).exists(),install:false},
+        DependencyStatus{id:"poppler".into(),name:"Poppler / pdftotext (PDF)".into(),ok:has("pdftotext"),install:true,hint:String::new()},
+        DependencyStatus{id:"textutil".into(),name:"textutil (Word .docx, macOS)".into(),ok:has("textutil"),install:false,hint:String::new()},
+        DependencyStatus{id:"tesseract".into(),name:"Tesseract + français (texte des images)".into(),ok:tesseract_ok(),install:true,hint:String::new()},
+        DependencyStatus{id:"ffmpeg".into(),name:"FFmpeg (audio)".into(),ok:has("ffmpeg"),install:true,hint:String::new()},
+        DependencyStatus{id:"whisper".into(),name:"whisper-cli (transcription locale)".into(),ok:has("whisper-cli"),install:true,hint:String::new()},
+        DependencyStatus{id:"whisper-model".into(),name:"Modèle de transcription Whisper (≈ 470 Mo)".into(),ok:std::path::Path::new(&model).exists(),install:true,hint:"Téléchargement unique, puis tout marche hors ligne.".into()},
+        DependencyStatus{id:"ollama".into(),name:"Ollama (le résumé et les outils IA)".into(),ok:oll,install:false,hint:"Télécharge Ollama sur ollama.com, installe-le et ouvre-le une fois.".into()},
+        DependencyStatus{id:"ollama-model".into(),name:format!("Modèle de résumé ({})", ollama_model()),ok:oll_model,install:oll,hint:"Téléchargement unique (≈ 4,7 Go). Ollama doit être ouvert.".into()},
     ])
 }
 
@@ -1027,6 +1097,19 @@ async fn install_dependency(id: String) -> Result<String, String> {
 }
 
 fn install_dependency_blocking(id: String) -> Result<String, String> {
+    if id == "whisper-model" {
+        download_to("https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin", &whisper_model())?;
+        return Ok("Modèle Whisper installé.".into());
+    }
+    if id == "ollama-model" {
+        let model = ollama_model();
+        let r = ureq::AgentBuilder::new().timeout(std::time::Duration::from_secs(3600)).build()
+            .post("http://localhost:11434/api/pull").send_json(serde_json::json!({ "model": model, "stream": false }))
+            .map_err(|_| "Le téléchargement a échoué. Vérifie qu'Ollama est ouvert et que tu as internet.".to_string())?;
+        let v: serde_json::Value = r.into_json().map_err(e)?;
+        if let Some(er) = v["error"].as_str() { return Err(er.to_string()); }
+        return Ok("Modèle de résumé installé.".into());
+    }
     let (program,args): (&str, Vec<&str>) = match id.as_str() {
         "poppler" => ("brew", vec!["install", "poppler"]),
         "tesseract" => ("brew", vec!["install", "tesseract", "tesseract-lang"]),
@@ -1131,7 +1214,7 @@ fn main() {
             start_reminder_watcher(app.handle().clone());
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![player_diagnostic, media_key_test, now_playing, open_web, system_audio, system_mute, system_volume, add_item, add_course, read_audio, save_download, google_status, google_save_keys, google_clear_keys, google_connect, google_cancel, google_disconnect, google_backup, google_restore, open_url, install_fonts, list_fonts, read_font, notify, media_status, media_control, media_volume, media_open, add_reminder, list_reminders, update_reminder, delete_reminder, list_items, search, set_done, delete_item, save_audio, transcribe, summarize, assist, export_md, pick, open_path, set_audio_dir, get_audio_dir, check_installation, install_dependency, import_text, save_course, export_backup, import_backup])
+        .invoke_handler(tauri::generate_handler![player_diagnostic, media_key_test, now_playing, open_web, system_audio, system_mute, system_volume, add_item, add_course, read_audio, save_download, google_status, google_save_keys, google_clear_keys, google_connect, google_cancel, google_disconnect, google_backup, google_restore, open_url, install_fonts, list_fonts, read_font, notify, media_status, media_control, media_volume, media_open, add_reminder, list_reminders, update_reminder, delete_reminder, list_items, search, set_done, delete_item, save_audio, transcribe, summarize, assist, export_md, pick, open_path, set_audio_dir, get_audio_dir, check_installation, check_update, install_dependency, import_text, save_course, export_backup, import_backup])
         .run(tauri::generate_context!())
         .expect("erreur au lancement de Bullo");
 }

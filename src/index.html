@@ -41,7 +41,7 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "
 const errText = x => (x && x.message) ? x.message : String(x);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const main = $("#main");
-const APP_VERSION = "1.0.0", ABOUT_CREDIT = "Vibe codé par Renz-VASA, avec un peu d’intelligence artificielle ✨";
+const APP_VERSION = "1.1.0", ABOUT_CREDIT = "Vibe codé par Renz-VASA, avec un peu d’intelligence artificielle ✨";
 
 // Clés de stockage locales (préfixe bullo_). Les anciennes clés de la version précédente sont migrées une seule fois, puis supprimées.
 const KEYS = { cfg: "bullo_cfg", tags: "bullo_tags", vers: "bullo_note_versions", draft: "bullo_draft", focus: "bullo_focus", pom: "bullo_pom_enabled", googleWhen: "bullo_google_when" };
@@ -241,7 +241,13 @@ let view = "home";
 function nav(v) {
   view = v; if (v !== "home") document.body.classList.remove("single-task-active");
   document.querySelectorAll("nav [data-v]").forEach(b => b.classList.toggle("on", b.dataset.v === v));
-  br.run++; ({ home, capture, inbox, reminders, search: searchView, tools, calm, settings })[v]();
+  br.run++;
+  try { ({ home, capture, inbox, reminders, search: searchView, tools, calm, settings })[v](); }
+  catch (er) {
+    console.error("Erreur d’affichage (" + v + ") :", er);
+    main.innerHTML = `<h1>Oups</h1><p class="msg err" role="alert">Cette page n’a pas pu s’afficher : ${esc(errText(er))}</p><p>Tes notes et tes enregistrements sont intacts. Le bouton ci-dessous efface seulement le brouillon en cours.</p><div class="row"><button class="primary" id="fixDraft">Réparer</button></div>`;
+    $("#fixDraft").onclick = () => { try { clearDraft(); cap.text = ""; cap.audio = null; cap.result = null; cap.choose = false; cap.msg = ""; } catch {} nav("home"); };
+  }
 }
 document.querySelectorAll("nav [data-v]").forEach(b => b.onclick = () => nav(b.dataset.v));
 let sizes = [18, 21, 24], si = 0;
@@ -386,7 +392,7 @@ const clearDraft = () => { try { localStorage.removeItem(DK); } catch {} };
 try {
   const d = JSON.parse(localStorage.getItem(DK));
   if (d && (d.text || d.audio || d.result)) {
-    cap.text = d.text || ""; cap.audio = d.audio || null; cap.result = d.result || null; cap.choose = !!d.choose && !!d.result;
+    cap.text = d.text || ""; cap.audio = d.audio || null; cap.result = normResult(d.result); cap.choose = !!d.choose && !!d.result;
     cap.msg = d.pending === "analyse" ? "Bullo s’est fermé pendant l’analyse : ton texte est là, clique sur Résumer pour la relancer."
       : d.pending === "transcription" ? "Bullo s’est fermé pendant la transcription : ton enregistrement est sauvegardé, clique sur « Transcrire à nouveau »."
       : d.result ? "Résumé retrouvé : rien n'est perdu." : "Brouillon retrouvé : rien n'est perdu.";
@@ -412,6 +418,20 @@ function resultHtml() {
     ${list("À retenir", r.a_retenir)}${list("Devoirs", r.taches)}${list("Dates", r.echeances)}${list("Questions pour le prof", r.questions)}
     ${remindHtml(r)}
     ${cap.choose ? chooser() : `<div class="row"><button class="primary" id="save">Enregistrer dans un cours</button></div>`}</div>`;
+}
+
+// Le modèle d'IA renvoie parfois une forme inattendue (une phrase au lieu d'une liste, un objet…). On remet tout au propre,
+// sinon une seule réponse bizarre, sauvegardée dans le brouillon, empêcherait d'ouvrir la page Capturer.
+function asList(v) {
+  if (v == null || v === "") return [];
+  if (Array.isArray(v)) return v.map(x => typeof x === "string" ? x : (x && typeof x === "object" ? Object.values(x).filter(y => typeof y === "string" || typeof y === "number").join(" · ") || JSON.stringify(x) : String(x))).filter(x => x.trim());
+  if (typeof v === "object") return asList(Object.values(v));
+  return String(v).split(/\n+/).map(x => x.replace(/^[-•*\d.)\s]+/, "").trim()).filter(Boolean);
+}
+function normResult(r) {
+  if (!r || typeof r !== "object" || Array.isArray(r)) return null;
+  const resume = typeof r.resume === "string" ? r.resume : asList(r.resume).join(" ");
+  return { resume, a_retenir: asList(r.a_retenir), taches: asList(r.taches), echeances: asList(r.echeances), questions: asList(r.questions) };
 }
 
 function capture() {
@@ -481,7 +501,8 @@ async function summarize() {
   const text = cap.text.trim();
   if (!text) return say("Il n'y a rien à résumer.", true);
   cap.busy = "Analyse…"; cap.result = null; cap.choose = false; saveDraft(); say("Analyse en cours… Tu peux changer d'onglet.");
-  try { cap.result = await invoke("summarize", { text }); cap.busy = ""; saveDraft(); say("Résumé prêt."); doneElsewhere("Le résumé est prêt."); }
+  try { cap.result = normResult(await invoke("summarize", { text }));
+    if (!cap.result) throw new Error("Le résumé reçu est vide ou illisible. Réessaie, ou raccourcis le texte."); cap.busy = ""; saveDraft(); say("Résumé prêt."); doneElsewhere("Le résumé est prêt."); }
   catch (er) { cap.busy = ""; saveDraft(); say(errText(er), true); doneElsewhere("Analyse impossible : " + errText(er), true); }
 }
 
@@ -737,7 +758,7 @@ const DEF = {
   font: "body", size: 18, lh: 1.6, letter: 0, theme: "auto", accent: "#5b4bf5", contrast: false, colorblind: "none", soft: false, reduceMotion: false, mask: false,
   name: "", pin: "", courses: [], hidePlayer: false, pomodoro: 25, breakMinutes: 5, ttsRate: 1, ttsVoice: "", singleTask: false, idleMinutes: 5,
   shortcuts: { search: "Ctrl+K", capture: "Ctrl+Shift+R", read: "Alt+L", park: "Ctrl+Shift+P" }, breakEvery: 0,
-  googleAuto: false, bgShuffle: false, bgFavOnly: false, bgSource: "bullo", extPref: "Music", extVolume: .7, bgSound: "rain", bgVolume: .5, bgBar: true, bgCollapsed: false, bgPauseOnRec: true
+  googleAuto: false, bgShuffle: false, bgFavOnly: false, bgSource: "bullo", extPref: "Music", extVolume: .7, bgSound: "rain", bgVolume: .5, bgBar: true, bgCollapsed: false, bgPauseOnRec: true, checkUpdates: true
 };
 let cfg = { ...DEF };
 function sanitizeCfg(c) {
@@ -803,8 +824,14 @@ async function checkFont(d) {
   if (d.always) return true;
   if (d.extra && !extraLoaded.has(d.id)) return false; // police téléchargeable : disponible seulement une fois installée
   if (d.system) return sysFontInstalled(d.family);
-  try { await document.fonts.load(`400 16px "${d.family}"`, "Aé"); } catch {} // une règle CSS en erreur ne doit pas masquer les autres
-  return [...document.fonts].some(f => f.family.replace(/["']/g, "") === d.family && f.status === "loaded");
+  const same = f => f.family.replace(/["']/g, "") === d.family;
+  const test = async () => {
+    let got = []; try { got = await document.fonts.load(`400 16px "${d.family}"`, "Aé"); } catch {} // une règle CSS en erreur ne doit pas masquer les autres
+    return (got.length > 0 && got.every(f => f.status === "loaded")) || [...document.fonts].some(f => same(f) && f.status === "loaded");
+  };
+  if (await test()) return true;
+  if (d.loadable && !d.extra) { await new Promise(r => setTimeout(r, 700)); return test(); } // police livrée avec l'appli : on laisse au moteur le temps de la charger
+  return false;
 }
 async function checkAllFonts() { await Promise.all(FONT_DEFS.map(async d => { fontOk[d.id] = await checkFont(d); })); return fontOk; }
 
@@ -850,9 +877,54 @@ async function checkInstallations() {
   const box = $("#install-status"); if (!box) return; box.textContent = "Vérification…";
   try {
     const r = await invoke("check_installation");
-    box.innerHTML = r.map(x => `<div class="item"><span class="t">${esc(x.name)}</span><span>${x.ok ? "✅ Installé" : "❌ Manquant"}</span>${!x.ok && x.install ? `<button class="ghost sm" data-install="${esc(x.id)}">Installer automatiquement</button>` : ""}</div>`).join("");
-    box.querySelectorAll("[data-install]").forEach(b => b.onclick = async () => { b.disabled = true; b.textContent = "Installation…"; try { await invoke("install_dependency", { id: b.dataset.install }); checkInstallations(); } catch (e) { box.insertAdjacentHTML("beforeend", `<p class="err">${esc(errText(e))}</p>`); } });
+    box.innerHTML = r.map(x => `<div class="item dep"><span class="t">${esc(x.name)}</span><span>${x.ok ? "✅ Prêt" : "❌ Manquant"}</span>${!x.ok && x.install ? `<button class="ghost sm" data-install="${esc(x.id)}">${x.id.endsWith("-model") ? "Télécharger" : "Installer automatiquement"}</button>` : ""}${!x.ok && x.id === "ollama" ? `<button class="ghost sm" data-web="https://ollama.com/download">Ouvrir ollama.com</button>` : ""}${!x.ok && x.hint ? `<small class="mute dep-hint">${esc(x.hint)}</small>` : ""}</div>`).join("");
+    box.querySelectorAll("[data-web]").forEach(b => b.onclick = () => invoke("open_web", { url: b.dataset.web }).catch(er => notice(errText(er), true)));
+    box.querySelectorAll("[data-install]").forEach(b => b.onclick = async () => {
+      const slow = b.dataset.install.endsWith("-model");
+      b.disabled = true; b.textContent = slow ? "Téléchargement… (plusieurs minutes, laisse Bullo ouvert)" : "Installation…";
+      try { await invoke("install_dependency", { id: b.dataset.install }); notice("C’est prêt."); if (view === "settings") checkInstallations(); }
+      catch (er) { b.disabled = false; b.textContent = "Réessayer"; box.insertAdjacentHTML("beforeend", `<p class="err" role="alert">${esc(errText(er))}</p>`); }
+    });
   } catch (e) { box.innerHTML = `<p class="err">${esc(errText(e))}</p>`; }
+}
+
+// ---- Mises à jour : on regarde la dernière version publiée sur GitHub. Bullo n'est pas signé par Apple : on ouvre la page de téléchargement, on n'installe rien en cachette. ----
+const UPDATE_KEY = "bullo_update_check";
+async function appVersion() { try { return await window.__TAURI__.app.getVersion(); } catch { return APP_VERSION; } }
+async function checkUpdate(manual) {
+  const out = $("#updMsg"), btn = $("#updBtn");
+  if (manual && btn) { btn.disabled = true; btn.textContent = "Recherche…"; }
+  try {
+    const u = await invoke("check_update", { current: await appVersion() });
+    try { localStorage.setItem(UPDATE_KEY, JSON.stringify({ at: Date.now(), latest: u.latest, url: u.url, newer: u.newer })); } catch {}
+    showUpdate(u, manual);
+  } catch (er) {
+    if (manual && out) { out.className = "msg err"; out.textContent = errText(er); }
+  }
+  if (btn) { btn.disabled = false; btn.textContent = "Rechercher une mise à jour"; }
+}
+function showUpdate(u, manual) {
+  const out = $("#updMsg");
+  if (u.newer) {
+    const html = `<b>Nouvelle version ${esc(u.latest)} disponible</b> (tu as la ${esc(u.current)}). <button class="primary sm" id="updGo">Voir la mise à jour</button>`;
+    if (out) { out.className = "msg"; out.innerHTML = html; $("#updGo").onclick = () => invoke("open_web", { url: u.url }).catch(er => notice(errText(er), true)); }
+    if (!manual) updBanner(u);
+  } else if (out) { out.className = "msg"; out.textContent = `✅ Bullo est à jour (version ${u.current}).`; }
+}
+function updBanner(u) {
+  if ($("#updBanner")) return;
+  const d = document.createElement("div"); d.id = "updBanner"; d.className = "upd-banner"; d.setAttribute("role", "status");
+  d.innerHTML = `<span>Bullo ${esc(u.latest)} est disponible.</span><button class="primary sm" id="updBannerGo">Voir</button><button class="ghost sm" id="updBannerNo" aria-label="Plus tard">Plus tard</button>`;
+  document.body.appendChild(d);
+  $("#updBannerGo").onclick = () => { invoke("open_web", { url: u.url }).catch(er => notice(errText(er), true)); d.remove(); };
+  $("#updBannerNo").onclick = () => d.remove();
+}
+// Au démarrage : au plus une vérification par jour, silencieuse (sans internet, rien ne s'affiche).
+function startupUpdateCheck() {
+  if (!cfg.checkUpdates) return;
+  let last = {}; try { last = JSON.parse(localStorage.getItem(UPDATE_KEY)) || {}; } catch {}
+  if (last.at && Date.now() - last.at < 864e5) { if (last.newer) appVersion().then(v => updBanner({ latest: last.latest, url: last.url, current: v })); return; }
+  checkUpdate(false);
 }
 
 // ---- Raccourcis clavier ----
@@ -1016,7 +1088,9 @@ function settings() {
     <div class="row"><button class="ghost" id="pickDir">Choisir un dossier…</button><button class="ghost" id="openDir">Ouvrir le dossier</button><button class="ghost" id="checkDeps">Vérifier les outils (FFmpeg, Whisper…)</button></div><div id="install-status"></div></section>
   <section class="card about"><h2>À propos</h2><div class="row" style="align-items:center;gap:14px"><img src="assets/bullo-player.png" alt="" width="56" height="56" style="border-radius:14px"><div><b>Bullo</b><br><span>${esc(ABOUT_CREDIT)}</span></div></div>
     <p>Bullo est né d’une idée simple : offrir un espace calme, inclusif et concret pour transformer un cours, une pensée ou un bruit de fond en prochaine action.</p>
-    <p class="mute">Mentions légales : Bullo est un outil local de productivité. Les données restent sur l’appareil sauf action explicite de l’utilisateur. Aucune garantie médicale ou pédagogique.</p><p class="mute" id="ver">Version …</p></section>`;
+    <p class="mute">Mentions légales : Bullo est un outil local de productivité. Les données restent sur l’appareil sauf action explicite de l’utilisateur. Aucune garantie médicale ou pédagogique.</p><p class="mute" id="ver">Version …</p>
+    <div class="row"><button class="ghost" id="updBtn">Rechercher une mise à jour</button></div><p class="msg" id="updMsg" role="status"></p>
+    ${chk("checkUpdates", "Vérifier les mises à jour au démarrage (une requête vers GitHub, au plus une fois par jour)")}</section>`;
 
   // --- champs génériques ---
   const syncOut = el => { const o = $(`[data-o=${el.dataset.c}]`); if (!o) return; const k = el.dataset.c, v = cfg[k]; o.textContent = k === "size" ? v + " px" : k === "lh" ? (+v).toFixed(1) : k === "letter" ? v + " px" : k === "ttsRate" ? (+v).toFixed(1) + "×" : k === "bgVolume" ? Math.round(v * 100) + " %" : v; };
@@ -1114,6 +1188,7 @@ function settings() {
   $("#pickDir").onclick = async () => { try { const d = await invoke("pick", { kind: "folder" }); await invoke("set_audio_dir", { path: d.replace(/\/$/, "") }); $("#audioDir").textContent = d; notice("Dossier des enregistrements mis à jour (les anciens fichiers restent où ils sont)."); } catch (er) { if (errText(er) !== "Annulé.") notice(errText(er), true); } };
   $("#openDir").onclick = async () => { try { await invoke("open_path", { path: $("#audioDir").textContent }); } catch (er) { notice(errText(er), true); } };
   $("#checkDeps").onclick = checkInstallations;
+  $("#updBtn").onclick = () => checkUpdate(true);
   (async () => { let v = APP_VERSION; try { v = await window.__TAURI__.app.getVersion(); } catch {} const el = $("#ver"); if (el) el.textContent = "Version " + v; })();
 }
 
@@ -1408,12 +1483,12 @@ function searchView() {
   });
   run();
 }
-ttsInit(); bgInit(); applyCfg(); pomWidget(); lock(); setTimeout(pollReminders, 1500);
+ttsInit(); bgInit(); applyCfg(); pomWidget(); lock(); setTimeout(pollReminders, 1500); setTimeout(startupUpdateCheck, 4000);
 nav("home");
 // Si la police choisie n'est plus disponible, on le dit explicitement et on revient à la police par défaut.
 fontsReady = loadAppFonts().then(() => checkAllFonts());
-fontsReady.then(() => checkFont(fontDef(cfg.font))).then(ok => {
-  if (ok) return;
+fontsReady.then(() => cfg.font === "body" ? true : checkFont(fontDef(cfg.font))).then(ok => {
+  if (ok) return; // la police par défaut n'a pas de « police de secours » : inutile de prévenir
   notice(`La police « ${fontDef(cfg.font).label.split(" (")[0]} » est introuvable : retour à la police par défaut.`, true, 9000);
   cfg.font = "body"; applyCfg(); if (view === "settings") settings();
 });

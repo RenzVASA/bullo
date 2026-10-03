@@ -198,3 +198,7 @@ body.single-task-active nav{display:none} body.single-task-active #main{max-widt
 .hc :focus-visible{outline:4px solid var(--accent);outline-offset:3px}
 .hc .mute,.hc small,.hc .msg,.hc .when{color:var(--mute)}
 .hc a{text-decoration:underline}
+
+/* Mises à jour et état des outils */
+.upd-banner{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bar-h,72px) + 24px);z-index:40;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:calc(100% - 32px);padding:10px 14px;border-radius:99px;background:var(--panel);color:var(--ink);border:1px solid var(--line);box-shadow:var(--sh,0 8px 30px rgba(0,0,0,.18))}
+.item.dep{flex-wrap:wrap;gap:8px 12px}.dep-hint{flex-basis:100%}
