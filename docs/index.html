@@ -102,6 +102,8 @@ details p{margin:0 0 16px;color:var(--mute)}
 footer{padding:48px 0 64px;color:var(--mute);font-size:.95rem;display:flex;flex-wrap:wrap;gap:12px 28px;justify-content:space-between;border-top:1px solid var(--line);margin-top:56px}
 footer a{color:var(--mute)}
 
+.about{background:var(--layer2);border:1px solid var(--line);border-radius:34px;padding:clamp(28px,5vw,56px);max-width:820px}
+.about h2{margin-top:0}.about p{margin:0 0 1em}.about .note{margin-top:1.4em;padding:16px 20px;border-radius:18px;background:var(--panel);border:1px solid var(--line);font-size:.98rem;color:var(--mute)}
 @media (max-width:860px){.install>*,.hero>*,.access>*{min-width:0}.code code,.code span{overflow-wrap:anywhere;word-break:break-all}.hero,.access,.shots{grid-template-columns:1fr}.steps{grid-template-columns:1fr}.hero{padding-bottom:56px;gap:36px}nav.links a:not(.keep){display:none}.stack{margin-bottom:10px}}
 @media (prefers-reduced-motion:reduce){.wave i{animation:none;height:12px}html{scroll-behavior:auto}}
 </style>
@@ -168,6 +170,16 @@ footer a{color:var(--mute)}
         <figure><img src="bien-etre-clair.png" alt="La page Bien-être de Bullo" loading="lazy"><figcaption>Bien-être : parking de pensées et respiration.</figcaption></figure>
       </div>
       <p class="note">Captures d'écran du simulateur de l'interface.</p>
+    </section>
+
+    <section id="auteur" aria-labelledby="t-auteur" style="padding-top:0">
+      <div class="about">
+        <h2 id="t-auteur">Pourquoi j'ai fait Bullo.</h2>
+        <p>Je suis un jeune Français neuroatypique, passionné de nouvelles technologies. J'ai créé Bullo pour les personnes comme moi : celles pour qui les outils d'étude classiques ne sont pas faits.</p>
+        <p>L'idée est simple : une application qui s'adapte à nos besoins, et pas l'inverse. Dyslexie, troubles de l'attention avec ou sans hyperactivité (TDAH), daltonisme… chacun règle l'interface comme il en a besoin.</p>
+        <p>Je ne prétends pas que Bullo soit magique. Je dis juste que c'est l'application que j'aurais aimé avoir, et c'est pour ça que je l'ai faite.</p>
+        <p class="note"><strong>En toute honnêteté :</strong> Bullo est développé par une seule personne. Les réglages pour le daltonisme, notamment, ne sont pas forcément parfaits : j'ai fait de mon mieux, et je continue de l'améliorer. Si quelque chose ne te convient pas, dis-le-moi sur GitHub, ça m'aide vraiment.</p>
+      </div>
     </section>
 
     <section id="installer" aria-labelledby="t-inst" style="padding:24px 0 72px">
