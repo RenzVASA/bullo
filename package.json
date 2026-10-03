@@ -7,7 +7,8 @@
     "logo": "node scripts/generate-logo-variants.js",
     "tauri": "tauri",
     "icon": "tauri icon app-icon.png",
-    "set-version": "node scripts/set-version.js"
+    "set-version": "node scripts/set-version.js",
+    "release": "bash scripts/release.sh"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",

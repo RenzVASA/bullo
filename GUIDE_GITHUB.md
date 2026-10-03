@@ -21,7 +21,13 @@ git config --global user.name  "Ton nom ou pseudo"
 git config --global user.email "ton-adresse@exemple.com"
 gh auth login                   # choisis GitHub.com > HTTPS > « Login with a web browser »
 ```
-Astuce confidentialité : dans GitHub > Settings > Emails, coche « Keep my email address private » et utilise l'adresse `…@users.noreply.github.com` dans la commande `user.email`.
+Astuce confidentialité : dans GitHub > Settings > Emails, coche « Keep my email addresses private ». Puis, au lieu de ta vraie adresse, utilise celle de GitHub :
+```bash
+ID=$(gh api user --jq '.id')
+git config --global user.name  "TonPseudoGitHub"
+git config --global user.email "$ID+TonPseudoGitHub@users.noreply.github.com"
+```
+**Remplace toujours les exemples** (« Ton pseudo », « ton-adresse@exemple.com ») avant ton premier commit : ils deviennent publics.
 
 ## 3. Vérifier qu'aucun secret ne part sur Internet
 Avant le premier envoi, dans le dossier du projet :
@@ -75,18 +81,16 @@ Le fichier `.github/workflows/ci.yml` se lance à chaque `git push`. Dans l'ongl
 - croix rouge : clique dessus, lis l'erreur de `cargo check`, corrige, repousse. (Le Rust n'a jamais été compilé avant : la première fois, il est probable qu'il y ait quelques erreurs à corriger. C'est normal.)
 
 ## 9. Publier une version téléchargeable (.dmg)
+La procédure complète, avec les vérifications de confidentialité, est dans **[RELEASING.md](RELEASING.md)**. En résumé :
 ```bash
-npm run set-version -- 1.0.0     # si ce n'est pas déjà fait
+npm run set-version -- 1.0.0     # numéro de version (si besoin)
 # ajoute une section dans CHANGELOG.md, puis :
-git add . && git commit -m "Version 1.0.0"
-git tag v1.0.0
-git push && git push --tags
+git add . && git commit -m "Version 1.0.0" && git push
+npm run release                  # fabrique, contrôle, publie
 ```
-Le fichier `.github/workflows/release.yml` fabrique l'application sur un Mac de GitHub (10 à 20 minutes) et crée un **brouillon de Release** (onglet « Releases »). Ouvre-le, vérifie le fichier `.dmg`, relis le texte, puis clique sur « Publish release ».
+`npm run release` fabrique l'application sans aucun chemin de ton ordinateur, vérifie qu'aucun nom personnel n'est dedans, puis crée la Release avec le `.dmg`.
 
-**Important, application non signée :** sans compte développeur Apple (99 $/an), macOS affiche « Bullo ne peut pas être ouvert ». Le mode d'emploi pour les utilisateurs : *clic droit sur Bullo > Ouvrir > Ouvrir*, ou Réglages Système > Confidentialité et sécurité > « Ouvrir quand même ». Écris-le dans la description de la Release.
-
-Si la fabrication échoue, l'erreur est dans l'onglet Actions. Cause fréquente : une erreur de compilation Rust (voir 8).
+**Application non signée :** sans compte développeur Apple (99 $/an), macOS affiche « Bullo ne peut pas être ouvert » au premier lancement. Mode d'emploi pour les utilisateurs : *clic droit sur Bullo > Ouvrir > Ouvrir*. Si macOS dit « endommagée » : `xattr -cr /Applications/Bullo.app`. Le script ajoute ces phrases dans le texte de la Release.
 
 ## 10. Après la publication
 - Ajoute un lien « Télécharger » dans le README vers `Releases > Latest`.

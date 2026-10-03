@@ -42,6 +42,8 @@
 2. Ouvre-le et glisse **Bullo** dans **Applications**.
 3. Premier lancement : **clic droit sur Bullo > Ouvrir > Ouvrir**. (Bullo n'est pas encore signé par Apple, macOS demande donc une confirmation une seule fois.)
 
+Si macOS affiche « Bullo est endommagé », ouvre le Terminal et lance `xattr -cr /Applications/Bullo.app`, puis rouvre l'app.
+
 Ensuite Bullo te guide : il demande l'accès au micro, et propose d'installer lui-même les outils qui lui manquent (FFmpeg, Whisper, Tesseract) via [Homebrew](https://brew.sh).
 
 > **Pour la transcription et le résumé**, deux éléments doivent être présents sur le Mac, une seule fois : le modèle vocal Whisper et [Ollama](https://ollama.com) avec un modèle de langage. Les commandes sont dans la section « Pour les développeurs » ci-dessous. Sans eux, tout le reste fonctionne (notes, rappels, fond sonore, lecture vocale, accessibilité).
