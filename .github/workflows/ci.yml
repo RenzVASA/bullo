@@ -1,0 +1,20 @@
+# Vérifie à chaque envoi que l'interface est valide et que le code Rust compile.
+name: Vérification
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  verifier:
+    runs-on: macos-14   # Mac Apple Silicon
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with: { workspaces: src-tauri }
+      - run: npm install
+      - run: node scripts/check-frontend.js
+      - run: cargo check
+        working-directory: src-tauri

@@ -1,0 +1,1 @@
+const fs=require("fs"); const s=fs.readFileSync("src/index.html","utf8"); const js=[...s.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]).join("\n"); fs.writeFileSync("/tmp/bullo-frontend-check.js",js); require("child_process").execFileSync(process.execPath,["--check","/tmp/bullo-frontend-check.js"],{stdio:"inherit"}); console.log("Bullo frontend syntax OK");

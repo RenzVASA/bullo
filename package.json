@@ -1,0 +1,16 @@
+{
+  "name": "bullo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/check-frontend.js",
+    "logo": "node scripts/generate-logo-variants.js",
+    "tauri": "tauri",
+    "icon": "tauri icon app-icon.png",
+    "set-version": "node scripts/set-version.js"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "sharp": "^0.34.0"
+  }
+}

@@ -1,0 +1,26 @@
+# Fabrique l'application (.dmg) quand tu publies une version : git tag v1.0.0 && git push --tags
+name: Publier une version
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: macos-14   # Mac Apple Silicon
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with: { workspaces: src-tauri }
+      - run: npm install
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Bullo ${{ github.ref_name }}'
+          releaseBody: 'Télécharge le fichier .dmg ci-dessous. App non signée : au premier lancement, clic droit > Ouvrir.'
+          releaseDraft: true

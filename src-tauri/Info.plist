@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Bullo utilise le micro pour enregistrer et transcrire vos réunions. L'audio reste sur votre Mac.</string>
+  <key>NSAppleEventsUsageDescription</key>
+  <string>Bullo contrôle Musique et Spotify (lecture, pause, morceau suivant) depuis son mini lecteur. Rien n'est envoyé sur internet.</string>
+</dict></plist>

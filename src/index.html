@@ -1,0 +1,1422 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bullo</title>
+<link rel="icon" href="assets/favicon.ico" sizes="any">
+<link rel="icon" href="assets/favicon.png" type="image/png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <div class="brand"><img src="assets/logo-bullo-256.png" onerror="this.onerror=null;this.src='bullo-logo.svg'" alt="Logo Bullo" width="36" height="36"><b>Bullo</b></div>
+  <button data-v="home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg><span>Accueil</span></button>
+  <button data-v="capture"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><span>Capturer</span></button>
+  <button data-v="inbox"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 13l3-8h12l3 8v6H3z"/><path d="M3 13h5l1 3h6l1-3h5"/></svg><span>Inbox</span></button>
+  <button data-v="reminders"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0112 0v5l2 2H4z"/><path d="M10 21h4"/></svg><span>Rappels</span></button>
+  <button data-v="search"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><span>Rechercher</span></button>
+  <button data-v="tools"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 6a4 4 0 005 5l-9 9a2.1 2.1 0 01-3-3l9-9z"/><path d="M14 6l-3-3"/></svg><span>Outils</span></button>
+  <button data-v="calm"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21C7 17 4 14 4 10a4.5 4.5 0 018-2.8A4.5 4.5 0 0120 10c0 4-3 7-8 11z"/></svg><span>Bien-être</span></button>
+  <div id="pill" hidden role="status"></div>
+  <button id="me" data-v="settings" class="ghost" style="margin-top:auto"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg><span>Réglages</span></button>
+</nav>
+<main id="main"></main>
+<section id="bgbar" aria-label="Fond sonore">
+  <button id="bg-toggle" class="bg-toggle" aria-expanded="true" aria-controls="bg-body" aria-label="Réduire le lecteur de fond sonore"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+  <span class="bg-mini" id="bg-mini"></span>
+  <div class="bg-body" id="bg-body">
+    <label class="bg-src"><span class="sr">Source du son</span><select id="bg-source" aria-label="Source du son"></select></label>
+    <div class="bg-info"><span class="bg-art" aria-hidden="true"><img src="assets/bullo-player.png" alt="" width="40" height="40"><i class="bg-badge">🖥</i></span><span class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i></span><div><strong id="bg-name">Pluie</strong><small id="bg-state" role="status">À l’arrêt</small></div></div>
+    <div class="bg-ctl"><button id="bg-prev" aria-label="Son précédent" title="Son précédent">⏮</button><button id="bg-play" class="primary" aria-label="Lancer le fond sonore" aria-pressed="false">▶</button><button id="bg-next" aria-label="Son suivant" title="Son suivant">⏭</button><button id="bg-rep" class="xs" aria-label="Boucle" hidden>🔁</button><button id="bg-shuf" class="xs" aria-label="Aléatoire">🔀</button><button id="bg-fav" class="xs" aria-label="Favori">☆</button></div>
+    <label class="bg-vol"><span aria-hidden="true">🔊</span><input id="bg-volume" type="range" min="0" max="1" step="0.01" value="0.5" aria-label="Volume du fond sonore"></label>
+  </div>
+</section>
+<div id="tts-bar" role="group" aria-label="Lecture vocale" hidden><span id="tts-label" role="status"></span><button id="tts-pause" class="ghost sm" aria-pressed="false">⏸ Pause</button><button id="tts-stop" class="ghost sm">⏹ Arrêter</button></div>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+<script>
+const invoke = window.__TAURI__?.core?.invoke || (async () => { throw new Error("Cette fonction nécessite l’application Bullo (Tauri)."); });
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const errText = x => (x && x.message) ? x.message : String(x);
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const main = $("#main");
+const APP_VERSION = "1.0.0", ABOUT_CREDIT = "Vibe codé par Renz-VASA, avec un peu d’intelligence artificielle ✨";
+
+// Clés de stockage locales (préfixe bullo_). Les anciennes clés de la version précédente sont migrées une seule fois, puis supprimées.
+const KEYS = { cfg: "bullo_cfg", tags: "bullo_tags", vers: "bullo_note_versions", draft: "bullo_draft", focus: "bullo_focus", pom: "bullo_pom_enabled", googleWhen: "bullo_google_when" };
+(() => {
+  const legacy = { ff_cfg: KEYS.cfg, ff_tags: KEYS.tags, ff_note_versions: KEYS.vers, ff_draft: KEYS.draft, ff_focus: KEYS.focus };
+  try { for (const [o, n] of Object.entries(legacy)) { const v = localStorage.getItem(o); if (v === null) continue; if (localStorage.getItem(n) === null) localStorage.setItem(n, v); localStorage.removeItem(o); } } catch {}
+})();
+const TAGKEY = KEYS.tags;
+const tagState = (() => { try { return JSON.parse(localStorage.getItem(TAGKEY)) || {}; } catch { return {}; } })();
+const saveTags = () => { try { localStorage.setItem(TAGKEY, JSON.stringify(tagState)); } catch {} };
+
+// ---- Messages courts (remplace alert/prompt/confirm, non fiables dans la fenêtre Tauri) ----
+let toastTimer;
+function notice(msg, err = false, ms = 5000) {
+  const t = $("#toast"); if (!t) return;
+  t.textContent = msg; t.classList.toggle("err", !!err); t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, ms);
+}
+function askForm(title, fields) { // fields: [{id,label,value,type}] -> Promise<{id:value}|null>
+  return new Promise(res => {
+    const o = document.createElement("div"); o.className = "modal"; o.setAttribute("role", "dialog"); o.setAttribute("aria-modal", "true"); o.setAttribute("aria-label", title);
+    o.innerHTML = `<div class="card"><h2 style="margin-top:0">${esc(title)}</h2>${fields.map(f => `<label>${esc(f.label)}<input data-f="${f.id}" type="${f.type || "text"}" value="${esc(f.value ?? "")}"></label>`).join("")}<div class="row"><button class="primary" data-ok>Valider</button><button class="ghost" data-no>Annuler</button></div></div>`;
+    const done = v => { o.remove(); res(v); };
+    o.querySelector("[data-ok]").onclick = () => done(Object.fromEntries([...o.querySelectorAll("[data-f]")].map(i => [i.dataset.f, i.value])));
+    o.querySelector("[data-no]").onclick = () => done(null);
+    o.addEventListener("keydown", e => { if (e.key === "Escape") done(null); if (e.key === "Enter" && e.target.tagName === "INPUT") o.querySelector("[data-ok]").click(); });
+    document.body.append(o); o.querySelector("input").focus();
+  });
+}
+
+const idleState = { last: Date.now(), shown: false };
+["pointerdown", "keydown", "input", "mousemove"].forEach(e => addEventListener(e, () => { idleState.last = Date.now(); idleState.shown = false; }, { passive: true }));
+setInterval(() => {
+  const m = Number(cfg?.idleMinutes) || 0;
+  if (!m || idleState.shown || cap?.mr || Date.now() - idleState.last <= m * 60000) return;
+  idleState.shown = true;
+  const o = document.createElement("div"); o.className = "idle-pop"; o.setAttribute("role", "status");
+  o.innerHTML = '<div class="card"><b>Tu es encore là ?</b><p class="mute">Une petite pause ou un nouveau départ ?</p><button class="primary">Je reprends</button></div>';
+  document.body.append(o); o.querySelector("button").onclick = () => o.remove();
+}, 30000);
+
+// ---- Enregistrement de fichiers : directement dans Téléchargements (les <a download> ne sont pas fiables dans Tauri) ----
+async function saveBytes(name, bytes) {
+  if (window.__TAURI__) return invoke("save_download", { name, bytes: Array.from(bytes) });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([bytes])); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); return name;
+}
+const stampNow = () => new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+async function downloadText(text, ext, prefix = "bullo-transcription") {
+  try { const p = await saveBytes(`${prefix}-${stampNow()}.${ext}`, new TextEncoder().encode(text)); notice("Enregistré : " + p); }
+  catch (er) { notice("Export impossible : " + errText(er), true); }
+}
+// PDF minimal mais correct : plusieurs pages, accents (WinAnsi), table xref exacte.
+function pdfBytes(text) {
+  const WIN = { "€": 0x80, "‚": 0x82, "ƒ": 0x83, "„": 0x84, "…": 0x85, "†": 0x86, "‡": 0x87, "ˆ": 0x88, "‰": 0x89, "Š": 0x8A, "‹": 0x8B, "Œ": 0x8C, "Ž": 0x8E, "‘": 0x91, "’": 0x92, "“": 0x93, "”": 0x94, "•": 0x95, "–": 0x96, "—": 0x97, "˜": 0x98, "™": 0x99, "š": 0x9A, "›": 0x9B, "œ": 0x9C, "ž": 0x9E, "Ÿ": 0x9F };
+  const enc = ch => { const c = ch.charCodeAt(0); if (c < 0x20) return 0x20; if (c < 0x7f || (c >= 0xa0 && c <= 0xff)) return c; return WIN[ch] ?? 0x3f; };
+  const lat = s => { let o = ""; for (const ch of s) { const c = String.fromCharCode(enc(ch)); o += (c === "\\" || c === "(" || c === ")") ? "\\" + c : c; } return o; };
+  const W = 92, lines = [];
+  for (const raw of String(text).replace(/\t/g, "    ").split(/\r?\n/)) {
+    if (!raw.trim()) { lines.push(""); continue; }
+    let cur = "";
+    for (const w of raw.split(" ")) {
+      if (cur && (cur + " " + w).length > W) { lines.push(cur); cur = w; } else cur = cur ? cur + " " + w : w;
+      while (cur.length > W) { lines.push(cur.slice(0, W)); cur = cur.slice(W); }
+    }
+    lines.push(cur);
+  }
+  const PER = 56, pages = []; for (let i = 0; i < lines.length; i += PER) pages.push(lines.slice(i, i + PER)); if (!pages.length) pages.push([""]);
+  let pdf = "%PDF-1.4\n"; const offs = [];
+  const add = (n, body) => { offs[n] = pdf.length; pdf += `${n} 0 obj\n${body}\nendobj\n`; };
+  add(1, "<< /Type /Catalog /Pages 2 0 R >>");
+  add(2, `<< /Type /Pages /Kids [${pages.map((_, i) => `${4 + 2 * i} 0 R`).join(" ")}] /Count ${pages.length} >>`);
+  add(3, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
+  pages.forEach((pl, i) => {
+    const body = "BT\n/F1 10 Tf\n13 TL\n50 790 Td\n" + pl.map(l => `(${lat(l)}) Tj T*`).join("\n") + "\nET";
+    add(4 + 2 * i, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents ${5 + 2 * i} 0 R >>`);
+    add(5 + 2 * i, `<< /Length ${body.length} >>\nstream\n${body}\nendstream`);
+  });
+  const n = 3 + 2 * pages.length, x = pdf.length;
+  pdf += `xref\n0 ${n + 1}\n0000000000 65535 f \n` + offs.slice(1).map(o => String(o).padStart(10, "0") + " 00000 n \n").join("") + `trailer\n<< /Size ${n + 1} /Root 1 0 R >>\nstartxref\n${x}\n%%EOF\n`;
+  return Uint8Array.from(pdf, c => c.charCodeAt(0));
+}
+async function downloadPdf(text, prefix = "bullo-export") {
+  try { const p = await saveBytes(`${prefix}-${stampNow()}.pdf`, pdfBytes(text)); notice("Enregistré : " + p); }
+  catch (er) { notice("Export PDF impossible : " + errText(er), true); }
+}
+async function globalExport() {
+  try {
+    const all = await invoke("list_items", { kind: null });
+    const text = "# Export Bullo\n\n" + all.map(i => i.kind === "tache" ? `- [${i.done ? "x" : " "}] ${i.title}` : `\n## ${i.title} (${i.kind})\n${i.body || ""}`).join("\n");
+    await downloadText(text, "md", "bullo-global"); await downloadPdf(text, "bullo-global");
+  } catch (er) { notice("Export impossible : " + errText(er), true); }
+}
+function tagHtml(id) { const t = tagState[id] || {}; return `<span class="tag-chip" style="--tag:${esc(/^#[0-9a-f]{3,8}$/i.test(t.color || "") ? t.color : "#4f46e5")}">${esc(t.label || "Sans tag")}</span>`; }
+async function setTag(id) {
+  const r = await askForm("Tag de l’élément", [{ id: "label", label: "Tag (laisser vide pour retirer)", value: tagState[id]?.label || "" }, { id: "color", label: "Couleur", type: "color", value: tagState[id]?.color || "#4f46e5" }]);
+  if (!r) return;
+  if (!r.label.trim()) delete tagState[id]; else tagState[id] = { label: r.label.trim(), color: r.color || "#4f46e5" };
+  saveTags(); nav(view);
+}
+
+// ---- Lecture vocale (TTS) : découpée en phrases, pause/reprise/arrêt, erreurs explicites ----
+const tts = { id: 0, paused: false, warned: false };
+const ttsSupported = () => "speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined";
+const ttsVoices = () => { try { return speechSynthesis.getVoices() || []; } catch { return []; } };
+function ttsPick() { const all = ttsVoices(); if (cfg.ttsVoice) { const v = all.find(x => x.voiceURI === cfg.ttsVoice); if (v) return v; } return all.find(x => /^fr/i.test(x.lang)) || null; }
+function ttsChunks(text) {
+  const parts = String(text).replace(/\s+/g, " ").match(/[^.!?…;:]+[.!?…;:]*\s*/g) || [String(text)];
+  const out = []; let cur = "";
+  for (const p of parts) { if (cur && (cur + p).length > 220) { out.push(cur); cur = ""; } cur += p; }
+  if (cur.trim()) out.push(cur);
+  return out.map(s => s.trim()).filter(Boolean);
+}
+function ttsUi(label, show) {
+  const b = $("#tts-bar"); if (!b) return;
+  b.hidden = !show; $("#tts-label").textContent = label || "";
+  const p = $("#tts-pause"); p.textContent = tts.paused ? "▶ Reprendre" : "⏸ Pause"; p.setAttribute("aria-pressed", String(tts.paused));
+}
+function ttsStop() { tts.id++; tts.paused = false; try { speechSynthesis.cancel(); } catch {} ttsUi("", false); }
+function ttsError(code) {
+  if (code === "not-allowed") return "Lecture vocale bloquée par le système.";
+  if (code === "voice-unavailable" || code === "synthesis-unavailable" || code === "language-unavailable") return "Aucune voix disponible pour cette langue. Installe une voix française : Réglages Système > Accessibilité > Contenu énoncé.";
+  return `Lecture vocale impossible (${code || "erreur inconnue"}).`;
+}
+function readAloud(text) {
+  const clean = String(text || "").trim();
+  if (!clean) { notice("Il n’y a pas de texte à lire.", true); return false; }
+  if (!ttsSupported()) { notice("La lecture vocale n’est pas disponible sur ce système.", true); return false; }
+  ttsStop();
+  const myId = tts.id, voice = ttsPick(), chunks = ttsChunks(clean);
+  if (!voice && ttsVoices().length && !tts.warned) { tts.warned = true; notice("Aucune voix française installée : la voix par défaut du système sera utilisée.", false, 7000); }
+  chunks.forEach((c, i) => {
+    const u = new SpeechSynthesisUtterance(c);
+    if (voice) { u.voice = voice; u.lang = voice.lang; } else u.lang = "fr-FR";
+    u.rate = clamp(Number(cfg.ttsRate) || 1, .5, 2);
+    u.onstart = () => { if (myId === tts.id) ttsUi(`Lecture en cours (${i + 1}/${chunks.length})`, true); };
+    u.onend = () => { if (myId === tts.id && i === chunks.length - 1) { tts.paused = false; ttsUi("", false); } };
+    u.onerror = ev => { if (myId !== tts.id || ev.error === "canceled" || ev.error === "interrupted") return; ttsStop(); notice(ttsError(ev.error), true, 8000); };
+    try { speechSynthesis.speak(u); } catch (er) { ttsStop(); notice(ttsError(errText(er)), true); }
+  });
+  ttsUi("Lecture démarrée…", true);
+  return true;
+}
+function ttsInit() {
+  $("#tts-stop").onclick = ttsStop;
+  $("#tts-pause").onclick = () => { try { if (tts.paused) { speechSynthesis.resume(); tts.paused = false; } else { speechSynthesis.pause(); tts.paused = true; } } catch {} ttsUi($("#tts-label").textContent, true); };
+}
+
+// ---- Audio original : toujours relu depuis le fichier sur disque (jamais d’URL temporaire conservée) ----
+const MIME = { m4a: "audio/mp4", mp4: "audio/mp4", webm: "audio/webm", wav: "audio/wav", mp3: "audio/mpeg" };
+const mimeOf = p => MIME[String(p).split(".").pop().toLowerCase()] || "audio/mp4";
+async function loadAudioInto(el, path) {
+  if (!path) throw "Aucun enregistrement n’est associé à cet élément.";
+  const raw = await invoke("read_audio", { path });
+  const bytes = raw instanceof ArrayBuffer || ArrayBuffer.isView(raw) ? raw : Uint8Array.from(raw);
+  if (el.dataset.url) URL.revokeObjectURL(el.dataset.url);
+  el.dataset.url = URL.createObjectURL(new Blob([bytes], { type: mimeOf(path) }));
+  el.src = el.dataset.url; el.load();
+}
+const audioErr = el => { const c = el.error; return c ? ({ 1: "Lecture interrompue.", 2: "Erreur réseau pendant la lecture.", 3: "Le fichier audio est illisible (décodage impossible).", 4: "Format audio non pris en charge par cette fenêtre." }[c.code] || "Lecture audio impossible.") : "Lecture audio impossible."; };
+
+// ---- Pomodoro flottant (optionnel, désactivé par défaut) ----
+const pom = { phase: "work", running: false, end: 0, left: null, timer: 0 };
+const pomTotal = () => (pom.phase === "work" ? clamp(+cfg.pomodoro || 25, 1, 120) : clamp(+cfg.breakMinutes || 5, 1, 60)) * 60000;
+const pomLeft = () => pom.running ? Math.max(0, pom.end - Date.now()) : (pom.left ?? pomTotal());
+function pomTick() {
+  const el = $("#pom-time"); if (!el) return;
+  if (pom.running && Date.now() >= pom.end) { const was = pom.phase; pom.running = false; pom.left = null; pom.phase = was === "work" ? "break" : "work"; notice(was === "work" ? "Pomodoro terminé : place à la pause !" : "Pause terminée : on reprend quand tu veux.", false, 8000); }
+  el.textContent = fmt(Math.ceil(pomLeft() / 1000)); $("#pom-phase").textContent = pom.phase === "work" ? "Travail" : "Pause";
+  $("#pom-start").disabled = pom.running; $("#pom-pause").disabled = !pom.running;
+}
+function setPomEnabled(on) {
+  try { localStorage.setItem(KEYS.pom, String(!!on)); } catch {}
+  if (on) pomWidget(); else { clearInterval(pom.timer); pom.timer = 0; const w = $("#pom-widget"); if (w) w.remove(); }
+}
+function pomWidget() {
+  let on = false; try { on = localStorage.getItem(KEYS.pom) === "true"; } catch {}
+  if (!on || $("#pom-widget")) return;
+  document.body.insertAdjacentHTML("beforeend", `<aside id="pom-widget" aria-label="Pomodoro flottant"><button id="pom-mini" title="Afficher les contrôles" aria-expanded="false" aria-controls="pom-controls"><span id="pom-time">25:00</span><small id="pom-phase">Travail</small></button><div id="pom-controls" hidden><button id="pom-start" aria-label="Démarrer">▶</button><button id="pom-pause" aria-label="Pause">Ⅱ</button><button id="pom-reset" aria-label="Remettre à zéro">↺</button></div></aside>`);
+  const w = $("#pom-widget"), mini = $("#pom-mini"); let drag = null, moved = false;
+  mini.onpointerdown = e => { drag = { x: e.clientX - w.offsetLeft, y: e.clientY - w.offsetTop }; moved = false; mini.setPointerCapture(e.pointerId); };
+  mini.onpointermove = e => { if (!drag) return; const nx = e.clientX - drag.x, ny = e.clientY - drag.y; if (Math.abs(nx - w.offsetLeft) + Math.abs(ny - w.offsetTop) > 3) moved = true; if (!moved) return; w.style.left = clamp(nx, 4, innerWidth - w.offsetWidth - 4) + "px"; w.style.top = clamp(ny, 4, innerHeight - w.offsetHeight - 4) + "px"; w.style.right = "auto"; };
+  mini.onpointerup = () => { drag = null; };
+  mini.onclick = () => { if (moved) { moved = false; return; } const c = $("#pom-controls"); c.hidden = !c.hidden; mini.setAttribute("aria-expanded", String(!c.hidden)); };
+  $("#pom-start").onclick = () => { if (pom.running) return; pom.end = Date.now() + (pom.left ?? pomTotal()); pom.running = true; pomTick(); };
+  $("#pom-pause").onclick = () => { if (!pom.running) return; pom.left = Math.max(0, pom.end - Date.now()); pom.running = false; pomTick(); };
+  $("#pom-reset").onclick = () => { pom.running = false; pom.left = null; pom.phase = "work"; pomTick(); };
+  clearInterval(pom.timer); pom.timer = setInterval(pomTick, 500); pomTick();
+}
+
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); return true; }
+  catch { const a = document.createElement("textarea"); a.value = t; a.style.cssText = "position:fixed;opacity:0"; document.body.append(a); a.select(); let ok = false; try { ok = document.execCommand("copy"); } catch {} a.remove(); return ok; }
+}
+const LABEL = { note: "Note", tache: "Tâche", reunion: "Cours", cours: "Cours", idee: "Idée" };
+let view = "home";
+
+function nav(v) {
+  view = v; if (v !== "home") document.body.classList.remove("single-task-active");
+  document.querySelectorAll("nav [data-v]").forEach(b => b.classList.toggle("on", b.dataset.v === v));
+  br.run++; ({ home, capture, inbox, reminders, search: searchView, tools, calm, settings })[v]();
+}
+document.querySelectorAll("nav [data-v]").forEach(b => b.onclick = () => nav(b.dataset.v));
+let sizes = [18, 21, 24], si = 0;
+
+const ICON = {
+  corriger: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  simplifier: '<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>',
+  decomposer: '<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
+  bloque: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/>',
+  consigne: '<rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>',
+  reviser: '<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>',
+  import: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
+  tx: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h6"/>',
+  play: '<path d="M3 14v-4"/><path d="M7 18V6"/><path d="M11 21V3"/><path d="M15 17V7"/><path d="M19 14v-4"/>',
+  star: '<path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1Z"/>',
+  trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  copy: '<rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2"/>',
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'
+};
+const ico = (n, sz = 18) => `<svg class="ic" width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n]}</svg>`;
+
+// Les dates SQLite sont en UTC (« 2026-10-01 14:32:05 ») : on les affiche en heure locale, façon « Aujourd'hui · 14:32 ».
+function when(created) {
+  const d = new Date(String(created).replace(" ", "T") + "Z"); if (isNaN(d)) return "";
+  const day = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()), diff = Math.round((day(new Date()) - day(d)) / 864e5);
+  const h = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const dd = diff === 0 ? "Aujourd'hui" : diff === 1 ? "Hier" : d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: d.getFullYear() === new Date().getFullYear() ? undefined : "numeric" });
+  return `${dd} · ${h}`;
+}
+const dataOf = it => { try { return JSON.parse(it.data) || null; } catch { return null; } };
+const courseOf = it => it.course || (it.kind === "cours" || it.kind === "reunion" ? (it.title.split(" · ")[0] || "") : "");
+const dateTag = it => `<time class="when" datetime="${esc(it.created)}">${esc(when(it.created))}</time>`;
+
+const itemRow = (it, extra = "") => it.kind === "cours" && dataOf(it) ? courseCard(it) : `<div class="item" data-id="${it.id}">
+  ${it.kind === "tache" ? `<input type="checkbox" style="width:auto;margin-top:6px" ${it.done ? "checked" : ""} aria-label="Fait">` : ""}
+  <div class="t"><b>${esc(it.title)}</b> <small>${LABEL[it.kind] || it.kind}</small> ${dateTag(it)}
+  ${it.body ? `<div class="mute">${esc(it.body.slice(0, 160))}</div>` : ""}${tagHtml(it.id)}</div>${extra || `<button class="ghost" data-tag="${it.id}">Tag</button><button class="ghost" data-del>Supprimer</button>`}</div>`;
+
+// Un cours = une seule carte : résumé + devoirs, et trois boutons (À retenir, Transcription, Écouter) + Supprimer. Tout dans l'appli.
+function courseCard(it) {
+  const d = dataOf(it), c = courseOf(it), li = a => Array.isArray(a) && a.length ? `<ul>${a.map(x => `<li>${esc(typeof x === "string" ? x : JSON.stringify(x))}</li>`).join("")}</ul>` : "";
+  const det = [["À retenir", d.a_retenir], ["Devoirs", d.taches], ["Dates", d.echeances], ["Questions pour le prof", d.questions]].filter(([, a]) => Array.isArray(a) && a.length);
+  return `<article class="card course" data-id="${it.id}" data-audio="${esc(it.audio || "")}">
+    <div class="chead"><span class="chip on">${esc(c || "Cours")}</span>${dateTag(it)}</div>
+    <p class="cres">${esc(d.resume || it.title)}</p>
+    <div class="row cact">
+      ${det.length ? `<button class="ghost" data-p="det" aria-expanded="false">${ico("star")}<span>À retenir</span></button>` : ""}
+      <button class="ghost" data-p="tx" aria-expanded="false">${ico("tx")}<span>Transcription</span></button>
+      ${it.audio && !cfg.hidePlayer ? `<button class="ghost" data-p="au" aria-expanded="false">${ico("play")}<span>Écouter</span></button>` : ""}
+      <button class="ghost danger" data-del style="margin-left:auto">${ico("trash")}<span>Supprimer</span></button>
+    </div>
+    <div class="panel" data-panel="det" hidden>${det.map(([t, a]) => `<h2>${t}</h2>${li(a)}`).join("")}</div>
+    <div class="panel" data-panel="tx" hidden><div class="out txt">${esc(d.transcript || "Pas de transcription.")}</div>
+      <div class="row"><button class="ghost" data-speak="${esc(d.transcript || "")}">🔊 Écouter</button><button class="ghost" data-copy>${ico("copy")}<span>Copier</span></button></div></div>
+    <div class="panel" data-panel="au" hidden><audio controls preload="none" style="width:100%"></audio><p class="msg" data-am></p></div>
+  </article>`;
+}
+
+async function home() {
+  const tasks = (await invoke("list_items", { kind: "tache" })).filter(t => !t.done).reverse();
+  const cur = tasks[0];
+  main.innerHTML = `<h1>Bonjour</h1>
+  <div class="card now"><h2 style="margin-top:0">Maintenant</h2>${cfg.singleTask ? '<button class="ghost sm" id="exitsingle" style="float:right">Quitter ce mode</button>' : ""}
+  ${cur ? `<p>${esc(cur.title)}</p><button class="primary" id="done">C'est fait</button> <button class="ghost" id="start">Commencer le focus</button>
+     ${tasks.length > 1 ? `<span class="mute"> Ensuite : ${esc(tasks[1].title)}</span>` : ""}`
+        : `<p class="mute">Rien de prévu. Jette une idée dans l'Inbox ou lance une capture.</p>`}</div>
+  ${focusHtml()}
+  <div class="card"><h2 style="margin-top:0">Aujourd’hui</h2><p class="mute">Tâches, notes et rappels créés aujourd’hui.</p><button class="ghost" id="today">Voir la vue Aujourd’hui</button></div>
+  <div class="row"><button class="primary" id="g1">Nouvelle capture</button><button class="ghost" id="g2">Ouvrir l'Inbox</button></div>`;
+  if (cfg.singleTask && cur) document.body.classList.add("single-task-active"); else document.body.classList.remove("single-task-active");
+  $("#g1").onclick = () => nav("capture"); $("#g2").onclick = () => nav("inbox"); $("#today").onclick = async()=>{ const all=await invoke("list_items",{kind:null}); const d=new Date().toISOString().slice(0,10); main.innerHTML=`<h1>Aujourd’hui</h1><p class="mute">${all.filter(x=>String(x.created).slice(0,10)===d).length} élément(s) créé(s) aujourd’hui.</p>`+(all.filter(x=>String(x.created).slice(0,10)===d).map(x=>itemRow(x)).join("")||`<p class="msg">Rien pour aujourd’hui.</p>`); bindList(); };
+  const ex1 = $("#exitsingle"); if (ex1) ex1.onclick = () => { cfg.singleTask = false; applyCfg(); home(); };
+  const st = $("#start"), sp = $("#stop");
+  if (st) st.onclick = () => { localStorage.setItem(FK, JSON.stringify({ title: cur.title, t0: Date.now() })); home(); };
+  if (sp) sp.onclick = () => { localStorage.removeItem(FK); home(); };
+  if (cur) $("#done").onclick = async () => { await invoke("set_done", { id: cur.id, done: true }); home(); };
+}
+
+async function inbox() {
+  const items = await invoke("list_items", { kind: null });
+  main.innerHTML = `<h1>Inbox</h1><p class="mute">Écris tout ce qui te passe par la tête. On range plus tard.</p>
+  <textarea id="q" style="min-height:90px" placeholder="Une idée, une tâche, un rappel…"></textarea>
+  <div class="row"><button class="primary" data-k="note">Ajouter comme note</button>
+  <button class="ghost" data-k="tache">Ajouter comme tâche</button><button class="ghost" data-k="idee">Ajouter comme idée</button>
+  <button class="ghost" id="exp">Exporter (.md + .pdf)</button></div><p class="msg" id="em"></p>
+  <div id="list">${items.length ? items.map(i => itemRow(i, `<button class="ghost" data-del>Supprimer</button>`)).join("") : `<p class="mute">Ton Inbox est vide.</p>`}</div>`;
+  main.querySelectorAll("[data-k]").forEach(b => b.onclick = async () => {
+    const t = $("#q").value.trim(); if (!t) return;
+    await invoke("add_item", { kind: b.dataset.k, title: t.split("\n")[0].slice(0, 120), body: t.includes("\n") ? t : "" }); inbox();
+  });
+  $("#exp").onclick = globalExport;
+  bindList();
+}
+
+function bindList() {
+  const confirmDel = (b, run) => b.onclick = () => {
+    if (b.dataset.sure) return run();
+    b.dataset.sure = 1; const old = b.innerHTML; b.classList.add("sure"); b.innerHTML = ico("trash") + "<span>Sûr ? Clique encore</span>";
+    setTimeout(() => { delete b.dataset.sure; b.classList.remove("sure"); b.innerHTML = old; }, 3500);
+  };
+  main.querySelectorAll("[data-tag]").forEach(b => b.onclick=()=>setTag(b.dataset.tag));
+  main.querySelectorAll(".item").forEach(el => {
+    const id = +el.dataset.id, cb = $("input[type=checkbox]", el), del = $("[data-del]", el);
+    if (cb) cb.onchange = () => invoke("set_done", { id, done: cb.checked });
+    if (del) del.onclick = async () => { await invoke("delete_item", { id }); nav(view); };
+  });
+  main.querySelectorAll(".course").forEach(el => {
+    const id = +el.dataset.id, au = $("audio", el);
+    confirmDel($("[data-del]", el), async () => { await invoke("delete_item", { id }); nav(view); });
+    el.querySelectorAll("[data-p]").forEach(b => b.onclick = async () => {
+      const open = b.getAttribute("aria-expanded") !== "true";
+      el.querySelectorAll("[data-p]").forEach(x => x.setAttribute("aria-expanded", "false"));
+      el.querySelectorAll(".panel").forEach(x => x.hidden = true);
+      if (au) au.pause();
+      if (!open) return;
+      b.setAttribute("aria-expanded", "true"); $(`[data-panel=${b.dataset.p}]`, el).hidden = false;
+      if (b.dataset.p === "au" && !au.src) {
+        const msg = $("[data-am]", el); msg.textContent = ""; msg.classList.remove("err");
+        au.onerror = () => { msg.textContent = audioErr(au); msg.classList.add("err"); };
+        try { await loadAudioInto(au, el.dataset.audio); await au.play(); }
+        catch (er) { if (er && er.name === "NotAllowedError") return; msg.textContent = errText(er); msg.classList.add("err"); }
+      }
+    });
+    el.querySelectorAll("[data-speak]").forEach(b => b.onclick = () => readAloud(b.dataset.speak));
+    const cp = $("[data-copy]", el); if (cp) cp.onclick = async () => { const ok = await copyText($(".txt", el).textContent); $("span", cp).textContent = ok ? "Copié" : "Copie impossible"; };
+  });
+}
+
+const cap = { audio: null, mr: null, t0: 0, busy: "", msg: "Ou colle directement un texte ci-dessous.", err: false, text: "", result: null };
+const fmt = s => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+function pill() {
+  const txt = cap.mr ? `● ${fmt(Math.floor((Date.now() - cap.t0) / 1000))}` : cap.busy, p = $("#pill"), t = $("#timer");
+  p.hidden = !txt; p.textContent = txt;
+  if (t) t.innerHTML = cap.mr ? `<span class="rec">${txt}</span>` : "";
+}
+setInterval(pill, 500);
+$("#pill").onclick = () => nav("capture");
+// Brouillon automatique : si l'appli se ferme, la transcription est retrouvée au prochain lancement.
+const DK = KEYS.draft;
+const saveDraft = () => { try { localStorage.setItem(DK, JSON.stringify({ text: cap.text, audio: cap.audio, result: cap.result, choose: !!cap.choose, pending: cap.busy ? (cap.busy.startsWith("Trans") ? "transcription" : "analyse") : "" })); } catch {} };
+const clearDraft = () => { try { localStorage.removeItem(DK); } catch {} };
+try {
+  const d = JSON.parse(localStorage.getItem(DK));
+  if (d && (d.text || d.audio || d.result)) {
+    cap.text = d.text || ""; cap.audio = d.audio || null; cap.result = d.result || null; cap.choose = !!d.choose && !!d.result;
+    cap.msg = d.pending === "analyse" ? "Bullo s’est fermé pendant l’analyse : ton texte est là, clique sur Résumer pour la relancer."
+      : d.pending === "transcription" ? "Bullo s’est fermé pendant la transcription : ton enregistrement est sauvegardé, clique sur « Transcrire à nouveau »."
+      : d.result ? "Résumé retrouvé : rien n'est perdu." : "Brouillon retrouvé : rien n'est perdu.";
+  }
+} catch {}
+function say(msg, err = false) { cap.msg = msg; cap.err = err; pill(); if (view === "capture") capture(); }
+// Quand une tâche de fond se termine alors qu'on est sur une autre page : on prévient, et tout est déjà sauvegardé.
+function doneElsewhere(msg, err = false) { saveDraft(); if (view !== "capture") notice(msg + (err ? "" : " Ouvre Capturer pour la voir."), err, 9000); }
+
+function chooser() {
+  return `<h2>C'était un cours de quoi ?</h2><div class="row">${cfg.courses.map(c => `<button class="primary" data-course="${esc(c)}">${esc(c)}</button>`).join("")}</div>
+  <div class="row"><input id="nc" placeholder="Nouveau cours (ex. Anglais)" aria-label="Nouveau cours"><button class="ghost" id="addc">Ajouter et enregistrer</button></div>`;
+}
+function remindHtml(r) {
+  const items = [...(r.taches || []), ...(r.echeances || [])].map(x => typeof x === "string" ? x : JSON.stringify(x)).filter(Boolean);
+  if (!items.length) return "";
+  return `<h2>Créer des rappels</h2><p class="mute">Bullo propose une date quand il en reconnaît une ; tu peux la changer.</p>${items.map((x, i) => `<div class="item"><span class="t">${esc(x)}</span><button class="ghost sm" data-remind="${i}">⏰ Rappel</button></div>`).join("")}`;
+}
+function resultHtml() {
+  const r = cap.result, list = (t, a) => Array.isArray(a) && a.length ? `<h2>${t}</h2><ul>${a.map(x => `<li>${esc(typeof x === "string" ? x : JSON.stringify(x))}</li>`).join("")}</ul>` : "";
+  return `<div class="card"><h2 style="margin-top:0">Résumé</h2><p>${esc(r.resume)}</p><div class="row"><button class="ghost" id="speak-result">🔊 Écouter le texte</button>${cap.audio ? `<button class="ghost" id="load-original">▶ Réécouter l’original</button>` : ""}</div>
+    ${cap.audio ? `<audio id="original-audio" controls preload="metadata" style="width:100%" hidden></audio><p class="msg" id="original-msg" role="status"></p>` : ""}
+    ${list("À retenir", r.a_retenir)}${list("Devoirs", r.taches)}${list("Dates", r.echeances)}${list("Questions pour le prof", r.questions)}
+    ${remindHtml(r)}
+    ${cap.choose ? chooser() : `<div class="row"><button class="primary" id="save">Enregistrer dans un cours</button></div>`}</div>`;
+}
+
+function capture() {
+  main.innerHTML = `<h1>Capturer</h1>
+  <div class="row"><button class="primary" id="rec" ${cap.busy && !cap.mr ? "disabled" : ""}>${cap.mr ? "Terminer" : "Enregistrer"}</button><span id="timer"></span></div>
+  <p class="msg ${cap.err ? "err" : ""}">${esc(cap.msg)}</p>
+  <h2>Transcription</h2><textarea id="tx" placeholder="La transcription apparaît ici. Tu peux la corriger.">${esc(cap.text)}</textarea>
+  <div class="row"><button class="ghost" id="exporttx">Exporter la transcription (.txt)</button><button class="ghost" id="savenote">Enregistrer comme note</button></div>${cap.audio && !cap.busy && !cap.mr ? `<div class="row"><button class="ghost" id="retx">Transcrire à nouveau l’enregistrement</button></div>` : ""}<div class="row"><button class="primary" id="sum" ${cap.busy ? "disabled" : ""}>Résumer</button></div><div id="res">${cap.result ? resultHtml() : ""}</div>`;
+  $("#rec").onclick = toggleRec; $("#sum").onclick = summarize; const rx = $("#retx"); if (rx) rx.onclick = transcribeAudio; $("#exporttx").onclick = () => exportTranscript(cap.text); $("#savenote").onclick = () => saveAsNote(cap.text); $("#tx").oninput = ev => { cap.text = ev.target.value; saveDraft(); };
+  if (cap.result) {
+    if (cap.choose) { main.querySelectorAll("[data-course]").forEach(b => b.onclick = () => save(b.dataset.course)); $("#addc").onclick = () => save($("#nc").value.trim()); }
+    else $("#save").onclick = () => { cap.choose = true; saveDraft(); capture(); };
+    const speak = $("#speak-result"); if (speak) speak.onclick = () => readAloud([cap.result.resume, ...(cap.result.a_retenir || []).map(x => typeof x === "string" ? x : "")].filter(Boolean).join(". "));
+    main.querySelectorAll("[data-remind]").forEach(b => b.onclick = () => { const items = [...(cap.result.taches || []), ...(cap.result.echeances || [])].map(x => typeof x === "string" ? x : JSON.stringify(x)).filter(Boolean), t = items[+b.dataset.remind]; createReminder(t, t); });
+    const orig = $("#load-original");
+    if (orig) orig.onclick = async () => {
+      const a = $("#original-audio"), m = $("#original-msg"); m.textContent = ""; m.classList.remove("err");
+      a.onerror = () => { m.textContent = audioErr(a); m.classList.add("err"); };
+      try { await loadAudioInto(a, cap.audio); a.hidden = false; await a.play(); }
+      catch (e) { if (e && e.name === "NotAllowedError") return; m.textContent = errText(e); m.classList.add("err"); }
+    };
+  }
+  pill();
+}
+
+async function toggleRec() {
+  if (cap.mr) { cap.mr.stop(); return; }
+  if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") return say("L’enregistrement n’est pas disponible dans cette fenêtre.", true);
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mime = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find(m => MediaRecorder.isTypeSupported(m)) || "";
+    const mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream), chunks = [], type = mr.mimeType || mime || "audio/webm";
+    mr.ondataavailable = ev => { if (ev.data && ev.data.size) chunks.push(ev.data); };
+    mr.onerror = () => { stream.getTracks().forEach(t => t.stop()); cap.mr = null; cap.busy = ""; bgOnRecord(false); say("L’enregistrement a rencontré une erreur.", true); };
+    mr.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop()); cap.mr = null; bgOnRecord(false);
+      if (!chunks.length) { cap.busy = ""; return say("Aucun son n’a été enregistré.", true); }
+      cap.busy = "Transcription…";
+      say("Transcription en cours… Tu peux changer d'onglet, ça continue en arrière-plan.");
+      try {
+        const bytes = new Uint8Array(await new Blob(chunks, { type }).arrayBuffer());
+        const path = await invoke("save_audio", bytes, { headers: { "x-ext": type.includes("mp4") ? "m4a" : "webm" } });
+        cap.audio = path; saveDraft(); // le fichier est sauvegardé : on garde le lien même si la transcription échoue
+        await transcribeAudio();
+      } catch (er) { cap.busy = ""; say(errText(er), true); doneElsewhere("Enregistrement : " + errText(er), true); }
+    };
+    bgOnRecord(true);
+    mr.start(); cap.mr = mr; cap.t0 = Date.now(); say("Enregistrement en cours…");
+  } catch (er) {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    say(stream ? "L’enregistrement n’a pas pu démarrer : " + errText(er) : "Micro inaccessible. Autorise-le dans Réglages Système > Confidentialité > Micro.", true);
+  }
+}
+
+async function transcribeAudio() {
+  if (!cap.audio) return say("Il n’y a pas d’enregistrement à transcrire.", true);
+  cap.busy = "Transcription…"; saveDraft(); say("Transcription en cours… Tu peux changer d'onglet, ça continue en arrière-plan.");
+  try {
+    const txt = await invoke("transcribe", { path: cap.audio });
+    cap.text = cap.text.trim() ? cap.text.trim() + " " + txt : txt; cap.busy = ""; saveDraft();
+    say("Transcription prête. Relis-la, puis clique sur Résumer."); doneElsewhere("Transcription terminée.");
+  } catch (er) { cap.busy = ""; saveDraft(); say(errText(er), true); doneElsewhere("Transcription impossible : " + errText(er), true); }
+}
+
+async function summarize() {
+  const text = cap.text.trim();
+  if (!text) return say("Il n'y a rien à résumer.", true);
+  cap.busy = "Analyse…"; cap.result = null; cap.choose = false; saveDraft(); say("Analyse en cours… Tu peux changer d'onglet.");
+  try { cap.result = await invoke("summarize", { text }); cap.busy = ""; saveDraft(); say("Résumé prêt."); doneElsewhere("Le résumé est prêt."); }
+  catch (er) { cap.busy = ""; saveDraft(); say(errText(er), true); doneElsewhere("Analyse impossible : " + errText(er), true); }
+}
+
+async function save(course) {
+  if (!course) return;
+  const r = cap.result, text = cap.text;
+  if (!cfg.courses.includes(course)) { cfg.courses.push(course); applyCfg(); }
+  const l = (t, a) => Array.isArray(a) && a.length ? `\n## ${t}\n` + a.map(x => `- ${typeof x === "string" ? x : JSON.stringify(x)}`).join("\n") + "\n" : "";
+  const md = `**Cours : ${course}**\n\n${r.resume || ""}\n${l("À retenir", r.a_retenir)}${l("Devoirs", r.taches)}${l("Dates", r.echeances)}${l("Questions pour le prof", r.questions)}\n## Transcription\n\n${text}\n`;
+  try {
+    const saved = await invoke("save_course", { course, title: course + " — " + new Date().toLocaleDateString("fr-FR"), md, audio: cap.audio }); googleAutoBackup();
+    const data = { resume: r.resume || "", a_retenir: r.a_retenir || [], taches: r.taches || [], echeances: r.echeances || [], questions: r.questions || [], transcript: text };
+    await invoke("add_course", { course, title: `${course} · ${String(r.resume || text).slice(0, 70)}`, body: md, data: JSON.stringify(data), audio: saved.audio, tasks: (r.taches || []).map(t => typeof t === "string" ? t : JSON.stringify(t)) });
+    cap.text = ""; cap.result = null; cap.audio = null; cap.choose = false; clearDraft(); cap.msg = "Rangé dans : " + saved.dir; nav("inbox");
+  } catch (er) { say(errText(er), true); }
+}
+
+// ===== Fond sonore : sons d’ambiance générés localement (Web Audio). Aucun fichier à choisir, aucun réseau. =====
+// Moteur totalement distinct de l’audio enregistré (balise <audio>) : l’un ne peut jamais détruire l’autre.
+const SOUNDS = [{ id: "rain", name: "Pluie" }, { id: "white", name: "Bruit blanc" }, { id: "pink", name: "Bruit rose" }, { id: "brown", name: "Bruit brun" }, { id: "cafe", name: "Café" }, { id: "nature", name: "Nature" }];
+const bg = { ctx: null, master: null, nodes: [], timers: [], playing: false, gen: 0, error: "", resumeAfterRec: false, buffers: {} };
+const bgIndex = () => Math.max(0, SOUNDS.findIndex(s => s.id === cfg.bgSound));
+// Favoris du lecteur : ambiances et titres (enregistrés dans Bullo, pour tous les lecteurs)
+const FAVK = "bullo_favs";
+function sanitizeFavs(a) { return (Array.isArray(a) ? a : []).filter(f => f && ["track", "ambient"].includes(f.k)).map(f => ({ k: f.k, title: String(f.title || "").slice(0, 120), artist: String(f.artist || "").slice(0, 120), app: String(f.app || "").slice(0, 30), id: String(f.id || "").slice(0, 20), at: +f.at || 0 })).filter(f => f.k === "ambient" ? SOUNDS.some(x => x.id === f.id) : !!f.title).slice(0, 500); }
+let favs; try { favs = sanitizeFavs(JSON.parse(localStorage.getItem(FAVK))); } catch { favs = []; }
+const saveFavs = () => { try { localStorage.setItem(FAVK, JSON.stringify(favs)); } catch {} };
+const isAmbFav = id => favs.some(f => f.k === "ambient" && f.id === id);
+const trackFavIdx = st => favs.findIndex(f => f.k === "track" && f.title === st.title && f.artist === (st.artist || ""));
+
+function bgGen(kind) { // 4 s de bruit bouclable, raccord lissé par fondu croisé
+  const sr = bg.ctx.sampleRate, len = sr * 4, f = Math.floor(sr * .08), n = len + f, r = new Float32Array(n);
+  if (kind === "white") for (let i = 0; i < n; i++) r[i] = Math.random() * 2 - 1;
+  else if (kind === "pink") { let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0; for (let i = 0; i < n; i++) { const w = Math.random() * 2 - 1; b0 = .99886 * b0 + w * .0555179; b1 = .99332 * b1 + w * .0750759; b2 = .969 * b2 + w * .153852; b3 = .8665 * b3 + w * .3104856; b4 = .55 * b4 + w * .5329522; b5 = -.7616 * b5 - w * .016898; r[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * .5362) * .11; b6 = w * .115926; } }
+  else { let last = 0; for (let i = 0; i < n; i++) { const w = Math.random() * 2 - 1; last = (last + .02 * w) / 1.02; r[i] = last * 3.5; } }
+  const buf = bg.ctx.createBuffer(1, len, sr), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = r[i];
+  for (let i = 0; i < f; i++) { const k = i / f; d[i] = r[i] * k + r[len + i] * (1 - k); }
+  return buf;
+}
+const bgSrc = kind => { const s = bg.ctx.createBufferSource(); s.buffer = bg.buffers[kind] ||= bgGen(kind); s.loop = true; s.start(); bg.nodes.push(s); return s; };
+const bgGain = v => { const g = bg.ctx.createGain(); g.gain.value = v; bg.nodes.push(g); return g; };
+const bgFilter = (type, f, q = .7) => { const n = bg.ctx.createBiquadFilter(); n.type = type; n.frequency.value = f; n.Q.value = q; bg.nodes.push(n); return n; };
+function bgChain(...nodes) { for (let i = 0; i < nodes.length - 1; i++) nodes[i].connect(nodes[i + 1]); nodes[nodes.length - 1].connect(bg.master); }
+function bgLfo(param, rate, depth) { const o = bg.ctx.createOscillator(), g = bgGain(depth); o.frequency.value = rate; o.connect(g); g.connect(param); o.start(); bg.nodes.push(o); }
+function bgEvery(fn, min, max) {
+  const h = { id: 0 }; bg.timers.push(h);
+  const tick = () => { if (!bg.playing) return; try { fn(); } catch {} h.id = setTimeout(tick, min + Math.random() * (max - min)); };
+  h.id = setTimeout(tick, min);
+}
+function bgBlip(freq0, freq1, ms, peak) { // courte note (tintement de tasse, piaulement)
+  const t = bg.ctx.currentTime, o = bg.ctx.createOscillator(), g = bg.ctx.createGain();
+  o.frequency.setValueAtTime(freq0, t); o.frequency.exponentialRampToValueAtTime(freq1, t + ms / 1000);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + .012); g.gain.exponentialRampToValueAtTime(.0001, t + ms / 1000);
+  o.connect(g); g.connect(bg.master); o.start(t); o.stop(t + ms / 1000 + .05);
+}
+const BUILD = {
+  white: () => bgChain(bgSrc("white"), bgGain(.45)),
+  pink: () => bgChain(bgSrc("pink"), bgGain(.9)),
+  brown: () => bgChain(bgSrc("brown"), bgGain(.9)),
+  rain: () => {
+    bgChain(bgSrc("white"), bgFilter("highpass", 900, .5), bgFilter("lowpass", 9000, .5), bgGain(.32));
+    const g = bgGain(.22); bgChain(bgSrc("pink"), bgFilter("bandpass", 2400, .4), g); bgLfo(g.gain, .13, .08);
+  },
+  cafe: () => {
+    const a = bgGain(.55), b = bgGain(.35);
+    bgChain(bgSrc("pink"), bgFilter("bandpass", 700, .6), a); bgLfo(a.gain, .31, .16);
+    bgChain(bgSrc("pink"), bgFilter("bandpass", 1500, .8), b); bgLfo(b.gain, .17, .12);
+    bgEvery(() => bgBlip(2600 + Math.random() * 1400, 2100, 140, .035), 2500, 7000);
+  },
+  nature: () => {
+    const wind = bgGain(.6); bgChain(bgSrc("brown"), bgFilter("lowpass", 520), wind); bgLfo(wind.gain, .07, .25);
+    const leaves = bgGain(.07); bgChain(bgSrc("pink"), bgFilter("highpass", 3200), leaves); bgLfo(leaves.gain, .11, .04);
+    bgEvery(() => { const base = 2400 + Math.random() * 1400; for (let i = 0; i < 2 + Math.floor(Math.random() * 3); i++) setTimeout(() => { if (bg.playing) bgBlip(base, base * 1.45, 90, .03); }, i * 140); }, 1800, 6500);
+  }
+};
+const bgVol = () => { const v = clamp(Number(cfg.bgVolume), 0, 1); return Number.isFinite(v) ? v * v : .25; };
+function bgSetVolume() { if (bg.master) bg.master.gain.setTargetAtTime(bgVol(), bg.ctx.currentTime, .02); }
+function bgClear() {
+  bg.timers.forEach(h => clearTimeout(h.id)); bg.timers = [];
+  bg.nodes.forEach(n => { try { n.stop && n.stop(); } catch {} try { n.disconnect(); } catch {} }); bg.nodes = [];
+}
+async function bgPlay() {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) throw "Le moteur audio n’est pas disponible dans cette fenêtre.";
+    if (!bg.ctx) { bg.ctx = new AC(); bg.master = bg.ctx.createGain(); bg.master.gain.value = bgVol(); bg.master.connect(bg.ctx.destination); }
+    await bg.ctx.resume();
+    bg.gen++; bgClear(); bg.master.gain.cancelScheduledValues(0); bg.master.gain.value = 0;
+    bg.playing = true; bg.error = ""; BUILD[SOUNDS[bgIndex()].id](); bgSetVolume();
+  } catch (er) { bg.playing = false; bg.error = errText(er); }
+  bgUi();
+}
+function bgPause() {
+  if (!bg.playing) return; bg.playing = false; const g = ++bg.gen;
+  if (bg.master) bg.master.gain.setTargetAtTime(0, bg.ctx.currentTime, .03);
+  setTimeout(() => { if (g === bg.gen) bgClear(); }, 250);
+  bgUi();
+}
+// ---- Deux sources seulement : le son de Bullo (ambiances générées) ou le son de l’ordinateur (Spotify, Music, navigateur…) ----
+const SOURCES = { bullo: { label: "Son de Bullo" }, computer: { label: "Son de l’ordinateur" } };
+const ext = { status: null, sys: null, err: "", warn: "", timer: 0, volTimer: 0, dragging: false };
+const rec = { p: null, paused: [], muted: false };
+const RECMUTE = "bullo_rec_mute";
+const hasTauri = () => !!window.__TAURI__?.core;
+const srcId = () => SOURCES[cfg.bgSource] ? cfg.bgSource : "bullo";
+const isExt = () => srcId() === "computer";
+async function extPoll() {
+  if (!isExt()) return;
+  let st = null;
+  try { st = await invoke("now_playing"); ext.err = ""; } catch (er) { st = null; ext.err = errText(er); }
+  if (!isExt()) return;
+  ext.status = st && st.kind !== "none" ? st : null; ext.warn = (st && st.warn) || "";
+  // Le volume système change rarement : on ne le relit que toutes les 15 s (le curseur du lecteur le met déjà à jour).
+  if (!ext.sys || Date.now() - (ext.sysAt || 0) > 15000) { try { ext.sys = await invoke("system_audio"); } catch { ext.sys = null; } ext.sysAt = Date.now(); }
+  bgUi();
+}
+setInterval(() => { if (isExt() && !document.hidden) extPoll(); }, 4000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden && isExt()) extPoll(); });
+const extTarget = () => (ext.status && ext.status.kind === "app" ? ext.status.app : "system");
+async function extCtl(action) {
+  try { await invoke("media_control", { app: extTarget(), action }); ext.err = ""; }
+  catch (er) { ext.err = errText(er); notice(ext.err, true, 7000); }
+  setTimeout(extPoll, 400); setTimeout(extPoll, 1500); bgUi();
+}
+async function bgSetSource(id) {
+  if (!SOURCES[id] || id === srcId()) return;
+  const leaving = srcId();
+  if (leaving === "bullo") bgPause();
+  else if (ext.status && ext.status.state === "playing") { try { await invoke("media_control", { app: extTarget(), action: "pause" }); } catch {} }
+  cfg.bgSource = id; ext.status = null; ext.err = ""; saveCfg();
+  const sel = $("[data-c=bgSource]"); if (sel) sel.value = id;
+  bgUi(); if (isExt()) extPoll();
+}
+function bgSelect(delta) {
+  if (isExt()) return extCtl(delta < 0 ? "previous" : "next");
+  let pool = SOUNDS; if (cfg.bgFavOnly) { const f = SOUNDS.filter(x => isAmbFav(x.id)); if (f.length) pool = f; }
+  let id;
+  if (cfg.bgShuffle && pool.length > 1) { do { id = pool[Math.floor(Math.random() * pool.length)].id; } while (id === cfg.bgSound); }
+  else { const i = Math.max(0, pool.findIndex(x => x.id === cfg.bgSound)); id = pool[(i + delta + pool.length) % pool.length].id; }
+  cfg.bgSound = id; saveCfg();
+  if (bg.playing) bgPlay(); else bgUi();
+}
+function bgToggle() {
+  if (!isExt()) return bg.playing ? bgPause() : bgPlay();
+  extCtl("playpause");
+}
+function bgExtraUi() {
+  const rep = $("#bg-rep"), sh = $("#bg-shuf"), fv = $("#bg-fav"); if (!rep) return;
+  const e = isExt(), st = ext.status, nat = !!(st && st.native && st.kind === "app");
+  const set = (b, txt, lab, on, dis) => { b.textContent = txt; b.title = lab; b.setAttribute("aria-label", lab); b.setAttribute("aria-pressed", String(!!on)); b.classList.toggle("on", !!on); b.disabled = !!dis; };
+  rep.hidden = !e;
+  if (e) { const r = nat ? st.repeat : ""; const on = nat && r !== "off" && r !== ""; set(rep, r === "one" ? "🔂" : "🔁", !nat ? "Boucle (disponible avec Apple Music et Spotify)" : r === "one" ? "Boucle : ce titre. Cliquer pour désactiver" : on ? "Boucle : tout. Cliquer pour répéter ce titre" : "Boucle désactivée. Cliquer pour l’activer", on, !nat); }
+  const shOn = e ? nat && st.shuffle === "true" : !!cfg.bgShuffle;
+  set(sh, "🔀", e ? (!nat ? "Aléatoire (disponible avec Apple Music et Spotify)" : shOn ? "Aléatoire activé" : "Aléatoire désactivé") : (shOn ? "Ambiance aléatoire : activée" : "Ambiance aléatoire : désactivée"), shOn, e && !nat);
+  let starred, can = true, lab;
+  if (!e) { starred = isAmbFav(cfg.bgSound); lab = starred ? "Retirer cette ambiance des favoris" : "Mettre cette ambiance en favori"; }
+  else { can = !!(st && st.title); starred = can && (trackFavIdx(st) >= 0 || st.fav === "true"); lab = !can ? "Aucun titre à mettre en favori" : starred ? "Retirer des favoris" : "Mettre en favori"; }
+  set(fv, starred ? "★" : "☆", lab, starred, !can);
+}
+async function bgFav() {
+  if (!isExt()) {
+    const id = cfg.bgSound, i = favs.findIndex(f => f.k === "ambient" && f.id === id);
+    if (i >= 0) favs.splice(i, 1); else favs.push({ k: "ambient", id, title: SOUNDS[bgIndex()].name, artist: "", app: "Bullo", at: Date.now() });
+    saveFavs(); bgUi(); return;
+  }
+  const st = ext.status; if (!st || !st.title) return;
+  const i = trackFavIdx(st), want = i < 0;
+  if (want) favs.push({ k: "track", title: st.title, artist: st.artist || "", app: st.label || "", id: "", at: Date.now() }); else favs.splice(i, 1);
+  saveFavs();
+  const music = st.native && st.app === "Music";
+  if (music && (st.fav === "true") !== want) { try { await invoke("media_control", { app: "Music", action: "favorite" }); } catch (er) { notice(errText(er), true, 6000); } }
+  notice(!want ? "Retiré des favoris." : music ? "Ajouté à tes favoris Bullo et à ceux d’Apple Music." : "Ajouté à tes favoris Bullo (cette appli ne permet pas de le faire chez elle).", false, 4500);
+  setTimeout(extPoll, 600); bgUi();
+}
+function bgUi() {
+  const bar = $("#bgbar"); if (!bar) return;
+  const collapsed = !!cfg.bgCollapsed, e = isExt(), st = ext.status;
+  const playing = e ? !!(st && st.state === "playing") : bg.playing;
+  bar.hidden = cfg.bgBar === false; bar.classList.toggle("collapsed", collapsed); bar.classList.toggle("playing", playing); bar.classList.toggle("is-computer", e);
+  const src = $("#bg-source"); if (src && !src.options.length) src.innerHTML = Object.entries(SOURCES).map(([k, v]) => `<option value="${k}">${esc(v.label)}</option>`).join(""); if (src) src.value = srcId();
+  let name, state, err = "";
+  if (!e) { name = SOUNDS[bgIndex()].name; err = bg.error; state = bg.error ? "Erreur : " + bg.error : bg.playing ? "En lecture" : "À l’arrêt"; }
+  else if (ext.err) { name = "Son de l’ordinateur"; err = ext.err; state = "Erreur : " + ext.err; }
+  else if (!ext.sys && !st) { name = "Son de l’ordinateur"; state = "Connexion…"; }
+  else if (!st) { name = "Son de l’ordinateur"; state = ext.warn ? ext.warn : "Rien en lecture détecté · ▶ envoie lecture/pause au Mac"; err = ext.warn; }
+  else { name = st.title || st.label || "Son de l’ordinateur"; state = (st.label ? st.label + " · " : "") + (st.artist ? st.artist + " · " : "") + (st.state === "playing" ? "En lecture" : "En pause") + (!st.title && st.kind !== "app" ? " (titre non disponible)" : ""); }
+  $("#bg-name").textContent = name; $("#bg-state").textContent = state; $("#bg-state").classList.toggle("err", !!err);
+  $("#bg-mini").textContent = `${e ? "Ordinateur" : "Bullo"} · ${name} · ${err ? "erreur" : playing ? "en lecture" : "à l’arrêt"}`;
+  const p = $("#bg-play"), closed = false;
+  p.textContent = closed ? "Ouvrir" : playing ? "⏸" : "▶"; p.classList.toggle("wide", !!closed);
+  p.setAttribute("aria-label", playing ? "Mettre en pause" : "Lancer la lecture"); p.setAttribute("aria-pressed", String(playing));
+  $("#bg-prev").setAttribute("aria-label", e ? "Morceau précédent" : "Son précédent"); $("#bg-next").setAttribute("aria-label", e ? "Morceau suivant" : "Son suivant");
+  $("#bg-prev").title = $("#bg-prev").getAttribute("aria-label"); $("#bg-next").title = $("#bg-next").getAttribute("aria-label");
+  const t = $("#bg-toggle"); t.setAttribute("aria-expanded", String(!collapsed)); t.setAttribute("aria-label", collapsed ? "Afficher le lecteur" : "Réduire le lecteur"); t.title = t.getAttribute("aria-label");
+  $("#bg-body").hidden = collapsed;
+  if (!ext.dragging) $("#bg-volume").value = e ? (ext.sys && ext.sys.volume >= 0 ? ext.sys.volume / 100 : cfg.extVolume) : cfg.bgVolume;
+  $("#bg-volume").setAttribute("aria-label", e ? "Volume de l’ordinateur" : "Volume du fond sonore");
+  bgExtraUi();
+  document.documentElement.style.setProperty("--bar-h", bar.hidden ? "0px" : bar.offsetHeight + "px");
+}
+function bgInit() {
+  $("#bg-play").onclick = bgToggle;
+  $("#bg-prev").onclick = () => bgSelect(-1); $("#bg-next").onclick = () => bgSelect(1);
+  $("#bg-rep").onclick = () => extCtl("repeat"); $("#bg-fav").onclick = bgFav;
+  $("#bg-shuf").onclick = () => { if (isExt()) extCtl("shuffle"); else { cfg.bgShuffle = !cfg.bgShuffle; saveCfg(); bgUi(); } };
+  $("#bg-source").onchange = e => bgSetSource(e.target.value);
+  const vol = $("#bg-volume");
+  vol.onpointerdown = () => { ext.dragging = true; }; vol.onpointerup = vol.onblur = () => { ext.dragging = false; };
+  vol.oninput = e => {
+    const v = clamp(+e.target.value, 0, 1);
+    if (isExt()) { cfg.extVolume = v; saveCfg(); clearTimeout(ext.volTimer); ext.volTimer = setTimeout(() => invoke("system_volume", { volume: Math.round(v * 100) }).then(() => { if (ext.sys) ext.sys.volume = Math.round(v * 100); }).catch(er => notice(errText(er), true)), 120); return; }
+    cfg.bgVolume = v; bgSetVolume(); saveCfg(); const o = $("[data-o=bgVolume]"); if (o) o.textContent = Math.round(cfg.bgVolume * 100) + " %";
+  };
+  $("#bg-toggle").onclick = () => { cfg.bgCollapsed = !cfg.bgCollapsed; saveCfg(); bgUi(); };
+  if ("ResizeObserver" in window) new ResizeObserver(() => { const bar = $("#bgbar"); if (bar && !bar.hidden) document.documentElement.style.setProperty("--bar-h", bar.offsetHeight + "px"); }).observe($("#bgbar"));
+  // Filet de sécurité : si Bullo a été fermé pendant un enregistrement, on rend le son à l’ordinateur.
+  try { if (localStorage.getItem(RECMUTE) === "1" && hasTauri()) invoke("system_mute", { muted: false }).catch(() => {}); localStorage.removeItem(RECMUTE); } catch {}
+  bgUi(); if (isExt()) extPoll();
+}
+// L’enregistrement du micro ne doit pas capter les haut-parleurs : on coupe TOUT le son de l’ordinateur (navigateur, Spotify, Music…),
+// on met Music/Spotify en pause, puis on remet exactement comme avant à l’arrêt. Réglable dans Réglages > Fond sonore.
+async function recMute() {
+  rec.paused = []; rec.muted = false;
+  let before;
+  try { before = await invoke("system_audio"); } catch (er) { notice("Impossible de couper le son de l’ordinateur : " + errText(er), true, 7000); return; }
+  const np = await invoke("now_playing").catch(() => null);
+  if (np && np.state === "playing" && np.kind !== "none") { const app = np.kind === "app" ? np.app : "system"; rec.paused.push(app); await invoke("media_control", { app, action: app === "system" ? "playpause" : "pause" }).catch(() => {}); }
+  if (!before.muted) {
+    try { await invoke("system_mute", { muted: true }); rec.muted = true; try { localStorage.setItem(RECMUTE, "1"); } catch {} }
+    catch (er) { notice("Impossible de couper le son de l’ordinateur : " + errText(er), true, 7000); }
+  }
+}
+async function recRestore() {
+  try { await rec.p; } catch {}
+  if (rec.muted) { await invoke("system_mute", { muted: false }).catch(() => {}); rec.muted = false; try { localStorage.removeItem(RECMUTE); } catch {} }
+  const apps = rec.paused; rec.paused = [];
+  for (const a of apps) await invoke("media_control", { app: a, action: a === "system" ? "playpause" : "play" }).catch(() => {});
+  if (isExt()) setTimeout(extPoll, 500);
+}
+function bgOnRecord(start) {
+  if (start) {
+    if (!cfg.bgPauseOnRec) return;
+    if (bg.playing) { bg.resumeAfterRec = true; bgPause(); }
+    if (hasTauri()) rec.p = recMute();
+  } else {
+    if (bg.resumeAfterRec) { bg.resumeAfterRec = false; bgPlay(); }
+    if (hasTauri() && rec.p) { recRestore().then(() => { rec.p = null; }); }
+  }
+}
+
+// ===== Réglages : tout est enregistré localement et réappliqué au démarrage =====
+const DEF = {
+  font: "body", size: 18, lh: 1.6, letter: 0, theme: "auto", accent: "#5b4bf5", contrast: false, colorblind: "none", soft: false, reduceMotion: false, mask: false,
+  name: "", pin: "", courses: [], hidePlayer: false, pomodoro: 25, breakMinutes: 5, ttsRate: 1, ttsVoice: "", singleTask: false, idleMinutes: 5,
+  shortcuts: { search: "Ctrl+K", capture: "Ctrl+Shift+R", read: "Alt+L", park: "Ctrl+Shift+P" }, breakEvery: 0,
+  googleAuto: false, bgShuffle: false, bgFavOnly: false, bgSource: "bullo", extPref: "Music", extVolume: .7, bgSound: "rain", bgVolume: .5, bgBar: true, bgCollapsed: false, bgPauseOnRec: true
+};
+let cfg = { ...DEF };
+function sanitizeCfg(c) {
+  const o = { ...DEF, ...(c && typeof c === "object" ? c : {}) };
+  o.size = clamp(Number(o.size) || DEF.size, 12, 32); o.lh = clamp(Number(o.lh) || DEF.lh, 1.2, 2.4); o.letter = clamp(Number(o.letter) || 0, 0, 3);
+  o.pomodoro = clamp(Math.round(Number(o.pomodoro)) || 25, 1, 120); o.breakMinutes = clamp(Math.round(Number(o.breakMinutes)) || 5, 1, 60);
+  o.ttsRate = clamp(Number(o.ttsRate) || 1, .5, 2); if (/^\d+$/.test(String(o.ttsVoice))) o.ttsVoice = "";
+  o.googleAuto = o.googleAuto === true; o.bgShuffle = o.bgShuffle === true; o.bgFavOnly = o.bgFavOnly === true; o.breakEvery = [0, 20, 30, 45, 60].includes(+o.breakEvery) ? +o.breakEvery : 0;
+  o.idleMinutes = clamp(Math.round(Number(o.idleMinutes)) || 0, 0, 120);
+  o.bgVolume = clamp(Number.isFinite(Number(o.bgVolume)) ? Number(o.bgVolume) : .5, 0, 1);
+  if (!SOUNDS.some(s => s.id === o.bgSound)) o.bgSound = DEF.bgSound;
+  if (o.bgSource === "music" || o.bgSource === "spotify") o.bgSource = "computer"; if (o.bgSource === "ambient") o.bgSource = "bullo";
+  if (!["bullo", "computer"].includes(o.bgSource)) o.bgSource = "bullo"; if (!["Music", "Spotify"].includes(o.extPref)) o.extPref = "Music";
+  o.extVolume = clamp(Number.isFinite(Number(o.extVolume)) ? Number(o.extVolume) : .7, 0, 1);
+  if (!FONT_DEFS.some(f => f.id === o.font)) o.font = "body";
+  if (!["auto", "light", "dark"].includes(o.theme)) o.theme = "auto";
+  if (!/^#[0-9a-f]{6}$/i.test(String(o.accent))) o.accent = DEF.accent;
+  if (!Array.isArray(o.courses)) o.courses = [];
+  o.shortcuts = { ...DEF.shortcuts, ...(o.shortcuts && typeof o.shortcuts === "object" ? o.shortcuts : {}) };
+  delete o.fontSize; delete o.pomEnabled;
+  return o;
+}
+
+// Polices : chaque entrée est vérifiée pour de vrai (chargée / installée). Jamais de repli silencieux.
+const FONT_DEFS = [
+  { id: "body", label: "Bullo (par défaut)", family: "Body", loadable: true },
+  { id: "dys", label: "OpenDyslexic", family: "OpenDyslexic", loadable: true },
+  { id: "dyslexie", label: "Dyslexie", family: "Dyslexie", system: true, hint: "police commerciale non incluse : à installer sur le Mac" },
+  { id: "lexend", label: "Lexend (lecture, dyslexie)", family: "Lexend", loadable: true, extra: true, hint: "elle se télécharge depuis Réglages > Apparence" },
+  { id: "atkinson", label: "Atkinson Hyperlegible (basse vision)", family: "Atkinson Hyperlegible", loadable: true, extra: true, hint: "elle se télécharge depuis Réglages > Apparence" },
+  { id: "verdana", label: "Verdana", family: "Verdana", system: true },
+  { id: "arial", label: "Arial", family: "Arial", system: true },
+  { id: "comic", label: "Comic Sans MS (option : avis partagés selon les personnes)", family: "Comic Sans MS", system: true },
+  { id: "display", label: "Bullo Titres", family: "Display", loadable: true },
+  { id: "sys", label: "Police du système", family: "system-ui", system: true, always: true }
+];
+const fontDef = id => FONT_DEFS.find(f => f.id === id) || FONT_DEFS[0];
+const fontStack = d => d.family === "system-ui" ? "system-ui, sans-serif" : `"${d.family}", Verdana, sans-serif`;
+const fontOk = {}; // id -> true/false une fois vérifié
+let fontCtx;
+function sysFontInstalled(name) {
+  fontCtx ||= document.createElement("canvas").getContext("2d");
+  const t = "mmmmmmmmmmlli wWÉéçœ", w = f => { fontCtx.font = `72px ${f}`; return fontCtx.measureText(t).width; };
+  return ["monospace", "serif", "sans-serif"].some(b => w(`"${name}", ${b}`) !== w(b));
+}
+// Polices téléchargées depuis l'appli : stockées dans le dossier de données de Bullo, chargées au démarrage via FontFace.
+const APP_FONTS = { "lexend-400.woff2": ["Lexend", "400", "lexend"], "lexend-700.woff2": ["Lexend", "700", "lexend"], "atkinson-400.woff2": ["Atkinson Hyperlegible", "400", "atkinson"], "atkinson-700.woff2": ["Atkinson Hyperlegible", "700", "atkinson"] };
+const extraLoaded = new Set();
+async function loadAppFonts() {
+  if (!window.__TAURI__) return;
+  let files = []; try { files = await invoke("list_fonts"); } catch { return; }
+  for (const f of files) {
+    const def = APP_FONTS[f]; if (!def) continue;
+    try {
+      const raw = await invoke("read_font", { file: f });
+      const bytes = raw instanceof ArrayBuffer || ArrayBuffer.isView(raw) ? raw : Uint8Array.from(raw);
+      const face = new FontFace(def[0], bytes, { weight: def[1] }); await face.load(); document.fonts.add(face); extraLoaded.add(def[2]);
+    } catch (er) { console.warn("Police illisible :", f, errText(er)); }
+  }
+}
+let fontsReady = Promise.resolve();
+async function checkFont(d) {
+  if (d.always) return true;
+  if (d.extra && !extraLoaded.has(d.id)) return false; // police téléchargeable : disponible seulement une fois installée
+  if (d.system) return sysFontInstalled(d.family);
+  try { await document.fonts.load(`400 16px "${d.family}"`, "Aé"); } catch {} // une règle CSS en erreur ne doit pas masquer les autres
+  return [...document.fonts].some(f => f.family.replace(/["']/g, "") === d.family && f.status === "loaded");
+}
+async function checkAllFonts() { await Promise.all(FONT_DEFS.map(async d => { fontOk[d.id] = await checkFont(d); })); return fontOk; }
+
+const PALETTES = { // palettes sûres (Okabe-Ito) : on ne se fie jamais à la seule couleur
+  deuteranopia: { light: ["#0072b2", "#e69f00", "#d55e00"], dark: ["#56b4e9", "#f0e442", "#e69f00"] },
+  protanopia: { light: ["#0072b2", "#e69f00", "#d55e00"], dark: ["#56b4e9", "#f0e442", "#e69f00"] },
+  tritanopia: { light: ["#cc3311", "#009988", "#882255"], dark: ["#ee7733", "#33bbee", "#ee3377"] }
+};
+const lum = hex => { const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; };
+const isDark = () => cfg.theme === "dark" || (cfg.theme === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
+const saveCfg = () => { try { localStorage.setItem(KEYS.cfg, JSON.stringify(cfg)); } catch {} };
+function applyCfg() {
+  const R = document.documentElement, r = R.style;
+  r.setProperty("--fs", cfg.size + "px"); r.setProperty("--lh", cfg.lh); r.setProperty("--letter", cfg.letter + "px");
+  const stack = fontStack(fontDef(cfg.font)); r.setProperty("--font", stack); r.setProperty("--disp", cfg.font === "body" ? "Display" : stack);
+  R.classList.toggle("reduce-motion", !!cfg.reduceMotion); R.classList.toggle("soft-theme", !!cfg.soft); R.classList.toggle("reading-mask", !!cfg.mask); R.classList.toggle("hc", !!cfg.contrast);
+  R.dataset.theme = cfg.theme; R.dataset.colorblind = cfg.colorblind || "none";
+  const pal = !cfg.contrast && PALETTES[cfg.colorblind], custom = !["#4f46e5", DEF.accent].includes(String(cfg.accent).toLowerCase());
+  let acc = null, acc2 = null, rec = null;
+  if (pal) [acc, acc2, rec] = pal[isDark() ? "dark" : "light"]; else if (custom && !cfg.contrast) acc = cfg.accent;
+  for (const [k, v] of [["--accent", acc], ["--accent2", acc2], ["--rec", rec], ["--on", acc ? (lum(acc) > .4 ? "#0d1017" : "#ffffff") : null]]) v ? r.setProperty(k, v) : r.removeProperty(k);
+  const me = $("#me span"); if (me) me.textContent = cfg.name ? "👤 " + cfg.name : "Réglages";
+  saveCfg(); bgUi?.();
+}
+try { cfg = sanitizeCfg(JSON.parse(localStorage.getItem(KEYS.cfg))); } catch { cfg = sanitizeCfg(null); }
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => { if (cfg.theme === "auto") applyCfg(); });
+
+const sha = async t => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)))].map(b => b.toString(16).padStart(2, "0")).join("");
+function lock() {
+  if (!cfg.pin || $("#lock")) return;
+  const o = document.createElement("div"); o.id = "lock";
+  o.innerHTML = `<div class="card"><h1>Bonjour${cfg.name ? " " + esc(cfg.name) : ""}</h1><input type="password" inputmode="numeric" placeholder="Code" aria-label="Code"><p class="msg err" role="alert"></p></div>`;
+  document.body.append(o); const i = o.querySelector("input"); i.focus();
+  i.oninput = async () => { if (await sha(i.value) === cfg.pin) o.remove(); else o.querySelector("p").textContent = i.value.length >= 4 ? "Code incorrect" : ""; };
+}
+function exportTranscript(text) { if (text.trim()) downloadText(text, "txt"); else notice("La transcription est vide.", true); }
+async function saveAsNote(text) {
+  if (!text.trim()) return notice("Il n’y a rien à enregistrer.", true);
+  try { await invoke("add_item", { kind: "note", title: "Transcription · " + new Date().toLocaleString("fr-FR"), body: text }); notice("Note enregistrée dans l’Inbox."); }
+  catch (er) { notice("Enregistrement impossible : " + errText(er), true); }
+}
+async function checkInstallations() {
+  const box = $("#install-status"); if (!box) return; box.textContent = "Vérification…";
+  try {
+    const r = await invoke("check_installation");
+    box.innerHTML = r.map(x => `<div class="item"><span class="t">${esc(x.name)}</span><span>${x.ok ? "✅ Installé" : "❌ Manquant"}</span>${!x.ok && x.install ? `<button class="ghost sm" data-install="${esc(x.id)}">Installer automatiquement</button>` : ""}</div>`).join("");
+    box.querySelectorAll("[data-install]").forEach(b => b.onclick = async () => { b.disabled = true; b.textContent = "Installation…"; try { await invoke("install_dependency", { id: b.dataset.install }); checkInstallations(); } catch (e) { box.insertAdjacentHTML("beforeend", `<p class="err">${esc(errText(e))}</p>`); } });
+  } catch (e) { box.innerHTML = `<p class="err">${esc(errText(e))}</p>`; }
+}
+
+// ---- Raccourcis clavier ----
+const SHORTCUT_ACTIONS = { search: "Rechercher", capture: "Capturer", read: "Écouter le texte", park: "Parking de pensées" };
+const RESERVED = "Ctrl+K"; // toujours réservé à « Rechercher »
+function comboOf(e) {
+  if (["Control", "Meta", "Alt", "Shift", "AltGraph"].includes(e.key)) return "";
+  const m = []; if (e.ctrlKey || e.metaKey) m.push("Ctrl"); if (e.altKey) m.push("Alt"); if (e.shiftKey) m.push("Shift");
+  let k = e.code?.startsWith("Key") ? e.code.slice(3) : e.code?.startsWith("Digit") ? e.code.slice(5) : e.key;
+  if (k === " ") k = "Space"; if (k.length === 1) k = k.toUpperCase();
+  return [...m, k].join("+");
+}
+function readTarget() {
+  const sel = String(getSelection?.() || "").trim(); if (sel) return sel;
+  if (cap.result && view === "capture") return [cap.result.resume, ...(cap.result.a_retenir || [])].filter(Boolean).join(". ");
+  const f = document.activeElement; if (f && f.tagName === "TEXTAREA" && f.value.trim()) return f.value;
+  return cap.text || tl.text || "";
+}
+const SHORTCUT_RUN = { search: () => nav("search"), capture: () => nav("capture"), read: () => readAloud(readTarget()), park: () => parkThought() };
+addEventListener("keydown", e => {
+  if ($("#lock") || e.target.classList?.contains("shortcut")) return;
+  const c = comboOf(e); if (!c) return;
+  if (c === RESERVED) { e.preventDefault(); return SHORTCUT_RUN.search(); }
+  for (const [k, run] of Object.entries(SHORTCUT_RUN)) if (cfg.shortcuts[k] && cfg.shortcuts[k] === c) { e.preventDefault(); return run(); }
+});
+
+
+// ===== Google Drive : sauvegarde chiffrée par le Trousseau macOS =====
+const GSTEPS = [
+  { t: "Créer un projet Google", url: "https://console.cloud.google.com/projectcreate", btn: "Ouvrir Google Cloud",
+    h: "<p>Google demande un « projet » pour autoriser une appli à écrire sur ton Drive. C’est gratuit et ça ne coûte rien.</p><ol><li>Clique sur le bouton ci-dessous et connecte-toi avec ton compte Google.</li><li>Nom du projet : <b>Bullo</b>.</li><li>Clique sur <b>Créer</b>, puis attends la petite notification « projet créé » et vérifie que « Bullo » est bien sélectionné en haut.</li></ol>" },
+  { t: "Activer l’API Google Drive", url: "https://console.cloud.google.com/apis/library/drive.googleapis.com", btn: "Ouvrir la page de l’API Drive",
+    h: "<p>Il faut dire à Google que ton projet a le droit d’utiliser Drive.</p><ol><li>Sur la page qui s’ouvre, vérifie que le projet <b>Bullo</b> est sélectionné en haut.</li><li>Clique sur <b>Activer</b>.</li></ol>" },
+  { t: "Écran de consentement", url: "https://console.cloud.google.com/apis/credentials/consent", btn: "Ouvrir l’écran de consentement",
+    h: "<p>C’est la page qui s’affichera quand tu autoriseras Bullo.</p><ol><li>Type d’utilisateurs : <b>Externe</b>, puis Créer (Google peut aussi afficher « Commencer »).</li><li>Nom de l’appli : <b>Bullo</b>. Adresse e-mail d’assistance et de contact : la tienne.</li><li>Dans <b>Utilisateurs tests</b> (ou « Audience »), ajoute <b>ta propre adresse Gmail</b>.</li><li>Dans <b>Accès aux données</b> (« Scopes »), ajoute <code>…/auth/drive.file</code> : Bullo ne voit alors que les fichiers qu’il crée lui-même, jamais le reste de ton Drive.</li><li>Conseil : passe l’appli en <b>Production</b> (« Publier l’appli »). Sinon Google peut couper l’autorisation au bout d’environ 7 jours et il faudra se reconnecter. Les menus de Google changent parfois : cherche les mots-clés, pas la position exacte.</li></ol>" },
+  { t: "Créer l’ID client", url: "https://console.cloud.google.com/apis/credentials", btn: "Ouvrir les identifiants",
+    h: "<p>Ce que Google appelle « la clé » pour Bullo est un <b>ID client OAuth</b> (une « clé API » simple ne marcherait pas pour écrire sur ton Drive).</p><ol><li><b>Créer des identifiants</b> → <b>ID client OAuth</b>.</li><li>Type d’application : <b>Application de bureau</b> (Desktop app). Nom : Bullo.</li><li>Clique sur <b>Créer</b>. Google affiche un <b>ID client</b> (finit par <code>.apps.googleusercontent.com</code>) et un <b>code secret client</b>. Garde cette fenêtre ouverte pour l’étape suivante.</li></ol>" },
+  { t: "Envoyer tes clés à Bullo", input: true },
+  { t: "Se connecter", connect: true }
+];
+let gState = { has_keys: false, connected: false, email: "" }, gBusy = false, gMsg = null;
+const gWhen = () => { try { return +localStorage.getItem(KEYS.googleWhen) || 0; } catch { return 0; } };
+const gFmt = t => t ? new Date(t * 1000).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" }) : "jamais";
+async function gRefresh() { try { gState = await invoke("google_status"); } catch { gState = { has_keys: false, connected: false, email: "", off: true }; } }
+async function renderGoogle() {
+  const box = $("#gbox"); if (!box) return;
+  await gRefresh(); if (!$("#gbox")) return;
+  if (gState.off) { box.innerHTML = '<p class="mute">La synchronisation Google est disponible dans l’application Bullo (pas dans un navigateur).</p>'; return; }
+  const fp = gState.has_keys ? `<p class="mute" id="gFp">🔒 Clés chiffrées dans le Trousseau macOS · empreinte SHA-256 <code>${esc(gState.fingerprint || "")}</code> ${gState.intact === false ? "⚠️ <b>modifiées ou corrompues : efface-les et recommence l’étape 5</b>" : "✅ intactes"}</p>` : "";
+  const m = gMsg ? `<p class="msg ${gMsg.err ? "err" : "ok"}" role="status">${esc(gMsg.t)}</p>` : '<p class="msg" role="status"></p>';
+  if (gState.connected) {
+    box.innerHTML = `<p>Connecté ✅ ${gState.email ? "<b>" + esc(gState.email) + "</b>" : ""}</p><p class="mute">Dernière sauvegarde : ${esc(gFmt(gWhen()))}. Fichier : Drive › Bullo › bullo-sauvegarde.json (notes, cours, rappels ; pas les fichiers audio).</p>${fp}
+      <div class="row"><button class="primary" id="gBackup">Sauvegarder maintenant</button><button class="ghost danger" id="gRestore">Restaurer depuis Google</button></div>
+      <label class="chk"><input type="checkbox" id="gAuto" ${cfg.googleAuto ? "checked" : ""}> Sauvegarder automatiquement après chaque cours enregistré</label>
+      <div class="row"><button class="ghost" id="gOut">Se déconnecter</button><button class="ghost" id="gWipe">Effacer mes clés</button></div>${m}`;
+  } else if (gState.has_keys) {
+    box.innerHTML = `<p>Tes clés sont rangées dans le Trousseau du Mac 🔒. Il reste à autoriser Bullo.</p>${fp}<div class="row"><button class="primary" id="gGo">Se connecter à Google</button><button class="ghost" id="gWipe">Effacer mes clés</button></div>${m}`;
+  } else {
+    box.innerHTML = `<p>Sauvegarde tes notes, cours et rappels dans <b>ton</b> Google Drive. Il faut une fois créer une clé gratuite chez Google ; Bullo te guide pas à pas (environ 5 minutes).</p><div class="row"><button class="primary" id="gTuto">Démarrer le tutoriel</button></div>${m}`;
+  }
+  const on = (id, f) => { const el = $(id, box); if (el) el.onclick = f; };
+  on("#gTuto", () => gWizard(0)); on("#gGo", () => gWizard(5));
+  on("#gBackup", gDoBackup);
+  on("#gRestore", function () { const b = this; if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = "Sûr ? Ça remplace tout — clique encore"; setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; b.textContent = "Restaurer depuis Google"; } }, 4000); return; } gDoRestore(); });
+  on("#gOut", async () => { try { await invoke("google_disconnect"); gMsg = { t: "Déconnecté. Tes clés restent dans le Trousseau." }; } catch (er) { gMsg = { t: errText(er), err: 1 }; } renderGoogle(); });
+  on("#gWipe", async () => { try { await invoke("google_clear_keys"); gMsg = { t: "Clés effacées du Trousseau." }; } catch (er) { gMsg = { t: errText(er), err: 1 }; } renderGoogle(); });
+  const au = $("#gAuto", box); if (au) au.onchange = e => { cfg.googleAuto = e.target.checked; applyCfg(); };
+}
+async function gDoBackup(silent) {
+  if (gBusy) return; gBusy = true; const b = $("#gBackup"); if (b) { b.disabled = true; b.textContent = "Envoi…"; }
+  try { const r = await invoke("google_backup"); try { localStorage.setItem(KEYS.googleWhen, String(r.when || Math.floor(Date.now() / 1000))); } catch {} gMsg = { t: `Sauvegardé : ${r.items} élément(s), ${r.reminders} rappel(s).` }; if (silent === true) notice("Sauvegarde Google faite ✅"); }
+  catch (er) { gMsg = { t: errText(er), err: 1 }; if (silent === true) notice("Sauvegarde Google impossible : " + errText(er), true); }
+  gBusy = false; renderGoogle();
+}
+function googleAutoBackup() { if (cfg.googleAuto) gDoBackup(true).catch(() => {}); }
+async function gDoRestore() {
+  if (gBusy) return; gBusy = true; const b = $("#gRestore"); if (b) { b.disabled = true; b.textContent = "Restauration…"; }
+  try { const r = await invoke("google_restore"); gMsg = { t: `Restauré : ${r.items} élément(s), ${r.reminders} rappel(s). Copie de sécurité de l’ancien contenu : ${r.safety}` }; }
+  catch (er) { gMsg = { t: errText(er), err: 1 }; }
+  gBusy = false; renderGoogle();
+}
+function gWizard(i) {
+  document.querySelector(".modal.gw")?.remove();
+  const st = GSTEPS[i], o = document.createElement("div"); o.className = "modal gw"; o.setAttribute("role", "dialog"); o.setAttribute("aria-modal", "true"); o.setAttribute("aria-label", "Tutoriel Google Drive");
+  let body = "";
+  if (st.input) body = `<p>Copie l’<b>ID client</b> et le <b>code secret client</b> affichés par Google, puis colle-les ici.</p>
+    <label>ID client<input id="gwId" autocomplete="off" spellcheck="false" placeholder="123456-abc.apps.googleusercontent.com"></label>
+    <label>Code secret client<input id="gwSec" type="password" autocomplete="off" spellcheck="false"></label>
+    <p class="mute">🔒 Pourquoi pas « haché » ? Un hachage ne se relit jamais, or Bullo doit relire tes clés pour parler à Google. Elles sont donc <b>chiffrées dans le Trousseau macOS</b> (jamais écrites dans un fichier ni dans les réglages), et les champs sont vidés dès l’envoi.</p><p class="msg" id="gwMsg" role="status"></p>`;
+  else if (st.connect) body = `<p>Dernière étape : une page Google va s’ouvrir dans ton navigateur.</p><ol><li>Choisis ton compte.</li><li>Si Google affiche « <b>Google n’a pas validé cette appli</b> », c’est normal (c’est ta propre appli) : clique sur <b>Paramètres avancés</b> puis <b>Accéder à Bullo</b>.</li><li>Autorise l’accès aux fichiers créés par Bullo, puis reviens ici.</li></ol><p class="msg" id="gwMsg" role="status"></p>`;
+  else body = st.h + `<div class="row"><button class="primary" id="gwOpen">${esc(st.btn)} ↗</button></div>`;
+  o.innerHTML = `<div class="card gwc"><p class="mute">Étape ${i + 1} sur ${GSTEPS.length}</p><h2 style="margin-top:0">${esc(st.t)}</h2>${body}
+    <div class="row gw-nav"><button class="ghost" id="gwPrev" ${i === 0 ? "disabled" : ""}>Précédent</button><button class="ghost" id="gwClose">Fermer</button>${st.input ? '<button class="primary" id="gwSave">Envoyer et ranger</button>' : st.connect ? '<button class="primary" id="gwConn">Se connecter</button>' : '<button class="primary" id="gwNext">Suivant</button>'}</div></div>`;
+  document.body.append(o);
+  const q = s => o.querySelector(s), msg = (t, err) => { const m = q("#gwMsg"); if (m) { m.className = "msg " + (err ? "err" : "ok"); m.textContent = t; } };
+  q("#gwClose").onclick = () => { if (gConnecting) invoke("google_cancel").catch(() => {}); o.remove(); renderGoogle(); };
+  o.addEventListener("keydown", e => { if (e.key === "Escape") q("#gwClose").click(); });
+  q("#gwPrev").onclick = () => gWizard(i - 1);
+  if (q("#gwNext")) q("#gwNext").onclick = () => gWizard(i + 1);
+  if (q("#gwOpen")) q("#gwOpen").onclick = async () => { try { await invoke("open_url", { url: st.url }); } catch (er) { notice(errText(er), true); } };
+  if (q("#gwSave")) q("#gwSave").onclick = async () => {
+    const id = q("#gwId").value, sec = q("#gwSec").value;
+    try { await invoke("google_save_keys", { clientId: id, clientSecret: sec }); q("#gwId").value = ""; q("#gwSec").value = ""; gWizard(i + 1); }
+    catch (er) { msg(errText(er), true); }
+  };
+  if (q("#gwConn")) q("#gwConn").onclick = async function () {
+    const b = this; b.disabled = true; b.textContent = "En attente de Google…"; gConnecting = true; msg("Termine l’autorisation dans ton navigateur (2 minutes max).");
+    try { const email = await invoke("google_connect"); gConnecting = false; gMsg = { t: "Connecté à Google ✅" + (email ? " (" + email + ")" : "") }; o.remove(); renderGoogle(); }
+    catch (er) { gConnecting = false; b.disabled = false; b.textContent = "Réessayer"; msg(errText(er), true); }
+  };
+  (q("input") || q("#gwOpen") || q("#gwNext") || q("#gwConn"))?.focus();
+}
+let gConnecting = false;
+function settings() {
+  const opt = (v, l, cur) => `<option value="${esc(v)}" ${String(cur) === String(v) ? "selected" : ""}>${esc(l)}</option>`;
+  const sel = (k, o) => `<select data-c="${k}">${Object.entries(o).map(([v, l]) => opt(v, l, cfg[k])).join("")}</select>`;
+  const rng = (k, a, b, st, show) => `<input type="range" data-c="${k}" min="${a}" max="${b}" step="${st}" value="${cfg[k]}"><output data-o="${k}">${show(cfg[k])}</output>`;
+  const chk = (k, l) => `<label class="chk"><input type="checkbox" data-c="${k}" ${cfg[k] ? "checked" : ""}> ${l}</label>`;
+  const sc = cfg.shortcuts;
+  main.innerHTML = `<h1>Réglages</h1><p class="lead">Personnalise Bullo. Chaque choix est conservé sur cet ordinateur et réappliqué au démarrage.</p>
+  <section class="card"><h2>Apparence</h2>
+    <div class="grid"><label>Thème ${sel("theme", { auto: "Système", light: "Clair", dark: "Sombre" })}</label>
+    <label>Police <select data-c="font" id="fontSel"></select></label></div>
+    <p class="msg" id="fontStatus" role="status">Vérification des polices…</p>
+    <div id="fontMissing"></div>
+    <p class="preview" id="fontPreview">Aperçu : Bonjour ! Voici comment s’affiche ton texte. Éèêà çœ 0123456789 — bdpq</p>
+    <div class="grid"><label>Taille du texte ${rng("size", 12, 32, 1, v => v + " px")}</label><label>Interlignage ${rng("lh", 1.2, 2.4, .1, v => (+v).toFixed(1))}</label>
+    <label>Espacement des lettres ${rng("letter", 0, 3, .25, v => v + " px")}</label><label>Couleur d’accent <input type="color" data-c="accent" value="${esc(cfg.accent)}"></label></div>
+    <label>Mode daltonien (palette adaptée) ${sel("colorblind", { none: "Aucun", deuteranopia: "Deutéranopie (rouge-vert)", protanopia: "Protanopie (rouge-vert)", tritanopia: "Tritanopie (bleu-jaune)", achromatopsia: "Niveaux de gris renforcés" })}</label>
+    ${chk("contrast", "Contraste élevé (noir/blanc, bordures et focus renforcés)")}${chk("soft", "Thème doux (moins éblouissant)")}${chk("reduceMotion", "Réduire les animations")}${chk("mask", "Masque de lecture (met en avant quelques lignes)")}
+    <div class="row"><button class="ghost" id="resetLook">Réinitialiser l’apparence</button></div></section>
+  <section class="card"><h2>Pomodoro</h2><label class="chk"><input type="checkbox" id="pomEnabled" ${localStorage.getItem(KEYS.pom) === "true" ? "checked" : ""}> Activer le widget flottant</label>
+    <div class="grid"><label>Travail (minutes)<input type="number" min="1" max="120" data-c="pomodoro" value="${cfg.pomodoro}"></label><label>Pause (minutes)<input type="number" min="1" max="60" data-c="breakMinutes" value="${cfg.breakMinutes}"></label></div>
+    <p class="msg">Widget déplaçable, qui reste visible quand tu changes de page. Clique sur le minuteur pour afficher ses boutons.</p></section>
+  <section class="card"><h2>Lecture vocale</h2><label>Vitesse ${rng("ttsRate", .5, 2, .1, v => (+v).toFixed(1) + "×")}</label>
+    <label>Voix<select id="ttsVoice"><option value="">Voix française automatique</option></select></label><p class="msg" id="ttsInfo"></p>
+    <div class="row"><button class="primary" id="ttsTest">Tester la voix</button><button class="ghost" id="ttsStop">Arrêter</button></div>
+    <p class="mute">Lecture assurée par la synthèse vocale du Mac (aucun réseau). Les voix se gèrent dans Réglages Système > Accessibilité > Contenu énoncé.</p></section>
+  <section class="card"><h2>Google Drive et sauvegardes</h2><div id="gbox"></div>
+    <h2>Notes et cours</h2><div class="row"><button class="ghost" id="backupItems">Sauvegarder mes notes et cours…</button><button class="ghost danger" id="restoreItems">Restaurer une sauvegarde…</button></div>
+    <p class="mute">La restauration remplace tout le contenu actuel. Les fichiers audio ne sont pas inclus dans la sauvegarde.</p>
+    <h2>Réglages</h2><div class="row"><button class="ghost" id="localExport">Exporter mes réglages (.json)</button><button class="ghost" id="localImport">Importer mes réglages (.json)</button><input id="importFile" type="file" accept="application/json" hidden></div><p id="syncMsg" class="msg" role="status"></p></section>
+  <section class="card"><h2>Raccourcis clavier</h2><p class="mute">Clique dans un champ puis appuie sur la combinaison voulue (avec Ctrl ou Alt ; Ctrl = ⌘ sur Mac). Retour arrière pour effacer. Ctrl+K reste toujours « Rechercher ».</p>
+    ${Object.entries(SHORTCUT_ACTIONS).map(([k, l]) => `<label>${l}<input class="shortcut" readonly data-shortcut="${k}" value="${esc(sc[k] || "")}" placeholder="Aucun" aria-label="Raccourci pour ${l}. Appuie sur la combinaison voulue."></label>`).join("")}
+    <div class="row"><button class="ghost" id="resetShortcuts">Rétablir les raccourcis par défaut</button></div><p id="shortcutMsg" class="msg" role="status"></p></section>
+  <section class="card"><h2>Fond sonore</h2><p class="mute">Petit lecteur fixe en bas de la fenêtre. Il joue des ambiances générées par l’appli : il est distinct de l’audio de tes enregistrements.</p>
+    <div class="grid"><label>Source du lecteur<select data-c="bgSource">${Object.entries(SOURCES).map(([k, v]) => opt(k, v.label, cfg.bgSource)).join("")}</select></label><label>Son d’ambiance par défaut<select data-c="bgSound">${SOUNDS.map(s => opt(s.id, s.name, cfg.bgSound)).join("")}</select></label><label>Volume par défaut ${rng("bgVolume", 0, 1, .01, v => Math.round(v * 100) + " %")}</label></div>
+    ${chk("bgBar", "Afficher la barre du fond sonore")}${chk("bgFavOnly", "Avec ⏮ ⏭, ne parcourir que mes ambiances favorites")}${chk("bgPauseOnRec", "Couper le son de l’ordinateur pendant un enregistrement (Bullo, navigateur, Spotify, Music… rétabli ensuite)")}
+    <h2>Diagnostic du lecteur</h2><p class="mute">Si le lecteur ne voit pas ta musique ou ne répond pas (Opera GX, par exemple), ce bouton montre ce que Bullo détecte. Envoie-moi le résultat.</p>
+    <div class="row"><button class="ghost" id="diag">Lancer le diagnostic</button><button class="ghost" id="diagKey">Tester la touche lecture/pause</button></div>
+    <pre id="diagOut" class="diag" hidden></pre><div class="row"><button class="ghost sm" id="diagCopy" hidden>Copier le résultat</button></div><p class="msg" id="diagMsg" role="status"></p></section>
+  <section class="card" id="favCard">${favsHtml()}</section>
+  <section class="card"><h2>Confort et concentration</h2>${chk("singleTask", "Mode une seule tâche (Accueil)")}${chk("hidePlayer", "Masquer le lecteur audio dans les cours")}
+    <label>Rappel d’inactivité (minutes, 0 = désactivé)<input type="number" min="0" max="120" data-c="idleMinutes" value="${cfg.idleMinutes}"></label></section>
+  <section class="card"><h2>Profil et confidentialité</h2><label>Prénom<input data-c="name" value="${esc(cfg.name)}" maxlength="40"></label>
+    <label>Code d’accès (4 chiffres ou plus)<input type="password" inputmode="numeric" id="pinNew" autocomplete="off" placeholder="${cfg.pin ? "Code défini — saisis-en un nouveau pour le changer" : "Aucun code"}"></label>
+    <div class="row"><button class="ghost" id="pinSave">Enregistrer le code</button>${cfg.pin ? `<button class="ghost" id="pinDel">Retirer le code</button>` : ""}</div><p id="pinMsg" class="msg" role="status"></p>
+    <h2>Mes cours</h2><div class="row chips" id="courseList">${cfg.courses.length ? cfg.courses.map((c, i) => `<span class="chip">${esc(c)} <button class="ghost sm" data-delcourse="${i}" aria-label="Retirer le cours ${esc(c)} de la liste">✕</button></span>`).join("") : `<span class="mute">Aucun cours pour l’instant.</span>`}</div>
+    <p class="mute">Retirer un cours de la liste ne supprime aucune note.</p></section>
+  <section class="card"><h2>Enregistrements et outils</h2><p class="mute">Dossier des enregistrements : <code id="audioDir">…</code></p>
+    <div class="row"><button class="ghost" id="pickDir">Choisir un dossier…</button><button class="ghost" id="openDir">Ouvrir le dossier</button><button class="ghost" id="checkDeps">Vérifier les outils (FFmpeg, Whisper…)</button></div><div id="install-status"></div></section>
+  <section class="card about"><h2>À propos</h2><div class="row" style="align-items:center;gap:14px"><img src="assets/bullo-player.png" alt="" width="56" height="56" style="border-radius:14px"><div><b>Bullo</b><br><span>${esc(ABOUT_CREDIT)}</span></div></div>
+    <p>Bullo est né d’une idée simple : offrir un espace calme, inclusif et concret pour transformer un cours, une pensée ou un bruit de fond en prochaine action.</p>
+    <p class="mute">Mentions légales : Bullo est un outil local de productivité. Les données restent sur l’appareil sauf action explicite de l’utilisateur. Aucune garantie médicale ou pédagogique.</p><p class="mute" id="ver">Version …</p></section>`;
+
+  // --- champs génériques ---
+  const syncOut = el => { const o = $(`[data-o=${el.dataset.c}]`); if (!o) return; const k = el.dataset.c, v = cfg[k]; o.textContent = k === "size" ? v + " px" : k === "lh" ? (+v).toFixed(1) : k === "letter" ? v + " px" : k === "ttsRate" ? (+v).toFixed(1) + "×" : k === "bgVolume" ? Math.round(v * 100) + " %" : v; };
+  main.querySelectorAll("[data-c]").forEach(el => {
+    const onChange = () => {
+      const k = el.dataset.c; let v;
+      if (el.type === "checkbox") v = el.checked;
+      else if (el.type === "range" || el.type === "number") { v = parseFloat(el.value); if (!Number.isFinite(v)) return; v = clamp(v, +el.min, +el.max); }
+      else v = el.value;
+      if (k === "bgSource") { bgSetSource(v); return; }
+      cfg[k] = v; syncOut(el); applyCfg();
+      if (k === "bgVolume") bgSetVolume(); if (k === "bgSound") { if (bg.playing) bgPlay(); } if (k === "bgBar") bgUi();
+      if (k === "font") fontReport();
+      if (k === "size" || k === "lh" || k === "letter") fontReport(true);
+    };
+    el.addEventListener("input", onChange); el.addEventListener("change", () => { if (el.type === "number") { const v = clamp(parseFloat(el.value) || +el.min, +el.min, +el.max); el.value = v; cfg[el.dataset.c] = v; applyCfg(); } });
+  });
+  // --- polices : état réel de chaque police ---
+  const fontReport = quick => {
+    const d = fontDef(cfg.font), p = $("#fontPreview"); if (p && !quick) p.style.fontFamily = fontStack(d);
+    if (quick) return;
+    const ok = fontOk[d.id], s = $("#fontStatus");
+    s.className = "msg" + (ok === false ? " err" : ""); s.textContent = ok === undefined ? "Vérification des polices…" : ok ? `✅ ${d.label.split(" (")[0]} est chargée et utilisée.` : `❌ ${d.label.split(" (")[0]} est introuvable${d.hint ? " : " + d.hint : ""}. Choisis une autre police.`;
+  };
+  const renderFontSelect = () => {
+    const sel = $("#fontSel"); if (!sel) return;
+    sel.innerHTML = FONT_DEFS.filter(f => fontOk[f.id] !== false || f.id === cfg.font).map(f => opt(f.id, f.label + (fontOk[f.id] === false ? " — indisponible" : ""), cfg.font)).join("");
+    const miss = FONT_DEFS.filter(f => fontOk[f.id] === false), box = $("#fontMissing");
+    const free = miss.filter(f => f.extra), paid = miss.filter(f => f.id === "dyslexie"), other = miss.filter(f => !f.extra && f.id !== "dyslexie");
+    box.innerHTML = (free.length ? `<div class="row"><button class="primary" id="dlFonts">Télécharger ${free.map(f => f.label.split(" (")[0]).join(" et ")} (gratuite${free.length > 1 ? "s" : ""})</button></div><p class="msg" id="dlMsg" role="status">Nécessite internet une seule fois ; ensuite elles fonctionnent hors ligne.</p>` : "")
+      + (paid.length ? `<p class="mute">Dyslexie est une police payante : installe-la sur ton Mac (app Livre des polices) et elle apparaîtra ici automatiquement.</p>` : "")
+      + (other.length ? `<p class="mute">Non installée sur ce système : ${other.map(f => esc(f.label.split(" (")[0])).join(", ")}.</p>` : "");
+    const b = $("#dlFonts");
+    if (b) b.onclick = async () => {
+      b.disabled = true; b.textContent = "Téléchargement…";
+      try { await invoke("install_fonts"); await loadAppFonts(); await checkAllFonts(); notice("Polices installées."); renderFontSelect(); fontReport(); }
+      catch (er) { b.disabled = false; b.textContent = "Réessayer le téléchargement"; const m = $("#dlMsg"); m.className = "msg err"; m.textContent = errText(er); }
+    };
+  };
+  renderFontSelect();
+  fontsReady.then(() => checkAllFonts()).then(() => { if (view !== "settings") return; renderFontSelect(); fontReport(); });
+  fontReport();
+  $("#resetLook").onclick = () => { for (const k of ["font", "size", "lh", "letter", "theme", "accent", "contrast", "colorblind", "soft", "reduceMotion", "mask"]) cfg[k] = DEF[k]; applyCfg(); settings(); notice("Apparence réinitialisée."); };
+  // --- Pomodoro ---
+  $("#pomEnabled").onchange = e => setPomEnabled(e.target.checked);
+  // --- Voix ---
+  const voices = () => {
+    const v = $("#ttsVoice"); if (!v) return; const list = ttsVoices(), fr = list.filter(x => /^fr/i.test(x.lang)), rest = list.filter(x => !/^fr/i.test(x.lang));
+    const o = x => `<option value="${esc(x.voiceURI)}" ${x.voiceURI === cfg.ttsVoice ? "selected" : ""}>${esc(x.name)} — ${esc(x.lang)}</option>`;
+    v.innerHTML = '<option value="">Voix française automatique</option>' + (fr.length ? `<optgroup label="Français">${fr.map(o).join("")}</optgroup>` : "") + (rest.length ? `<optgroup label="Autres langues">${rest.map(o).join("")}</optgroup>` : "");
+    $("#ttsInfo").className = "msg" + (!ttsSupported() || !list.length ? " err" : "");
+    $("#ttsInfo").textContent = !ttsSupported() ? "La synthèse vocale n’est pas disponible sur ce système." : !list.length ? "Aucune voix détectée pour le moment (chargement ou aucune voix installée)." : !fr.length ? "Aucune voix française installée : installe-en une dans Réglages Système > Accessibilité > Contenu énoncé." : `${fr.length} voix française(s) disponible(s).`;
+  };
+  voices(); if (ttsSupported()) speechSynthesis.onvoiceschanged = voices;
+  $("#ttsVoice").onchange = e => { cfg.ttsVoice = e.target.value; applyCfg(); };
+  $("#ttsTest").onclick = () => readAloud("Bonjour, ceci est un test de lecture vocale Bullo."); $("#ttsStop").onclick = ttsStop;
+  // --- Google Drive + sauvegardes ---
+  renderGoogle(); bindFavs(); bindDiag();
+  $("#localExport").onclick = () => downloadText(JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), settings: { ...cfg, pin: "" }, draft: localStorage.getItem(KEYS.draft), tags: tagState }, null, 2), "json", "bullo-reglages");
+  $("#localImport").onclick = () => $("#importFile").click();
+  $("#importFile").onchange = async e => {
+    const m = $("#syncMsg");
+    try { const f = e.target.files[0]; if (!f) return; const d = JSON.parse(await f.text()); if (!d || typeof d !== "object" || !d.settings) throw 0; const keepPin = cfg.pin; cfg = sanitizeCfg({ ...d.settings, pin: keepPin }); if (d.draft) localStorage.setItem(KEYS.draft, d.draft); if (d.tags && typeof d.tags === "object") { Object.assign(tagState, d.tags); saveTags(); } applyCfg(); settings(); notice("Réglages importés."); }
+    catch { m.className = "msg err"; m.textContent = "Fichier invalide : choisis un export de réglages Bullo (.json)."; }
+  };
+  $("#backupItems").onclick = async () => { try { const path = await invoke("pick", { kind: "save" }); const out = await invoke("export_backup", { path }); notice("Sauvegarde enregistrée : " + out); } catch (er) { if (errText(er) !== "Annulé.") notice(errText(er), true); } };
+  const rb = $("#restoreItems");
+  rb.onclick = async () => {
+    if (!rb.dataset.sure) { rb.dataset.sure = 1; rb.textContent = "Sûr ? Ça remplace tout — clique encore"; setTimeout(() => { delete rb.dataset.sure; rb.textContent = "Restaurer une sauvegarde…"; }, 4000); return; }
+    delete rb.dataset.sure; rb.textContent = "Restaurer une sauvegarde…";
+    try { const path = await invoke("pick", { kind: "file" }); const n = await invoke("import_backup", { path }); notice(`${n} élément(s) restauré(s).`); }
+    catch (er) { if (errText(er) !== "Annulé.") notice(errText(er), true); }
+  };
+  // --- Raccourcis ---
+  const scMsg = (t, err) => { const m = $("#shortcutMsg"); m.className = "msg" + (err ? " err" : ""); m.textContent = t; };
+  main.querySelectorAll(".shortcut").forEach(inp => inp.addEventListener("keydown", e => {
+    if (e.key === "Tab") return; e.preventDefault(); e.stopPropagation();
+    const k = inp.dataset.shortcut;
+    if (e.key === "Backspace" || e.key === "Delete") { cfg.shortcuts[k] = ""; inp.value = ""; applyCfg(); return scMsg(`Raccourci « ${SHORTCUT_ACTIONS[k]} » effacé.`); }
+    if (e.key === "Escape") return inp.blur();
+    const c = comboOf(e); if (!c) return;
+    if (!(e.ctrlKey || e.metaKey || e.altKey)) return scMsg("Ajoute Ctrl (⌘) ou Alt à la combinaison, sinon elle gênerait la saisie.", true);
+    const other = Object.keys(SHORTCUT_ACTIONS).find(x => x !== k && cfg.shortcuts[x] === c);
+    if (other || (c === RESERVED && k !== "search")) return scMsg(`Conflit : ${c} est déjà utilisé pour « ${SHORTCUT_ACTIONS[other || "search"]} ».`, true);
+    cfg.shortcuts[k] = c; inp.value = c; applyCfg(); scMsg(`« ${SHORTCUT_ACTIONS[k]} » : ${c} enregistré.`);
+  }));
+  $("#resetShortcuts").onclick = () => { cfg.shortcuts = { ...DEF.shortcuts }; applyCfg(); settings(); };
+  // --- Profil ---
+  const pm = (t, err) => { const m = $("#pinMsg"); m.className = "msg" + (err ? " err" : ""); m.textContent = t; };
+  $("#pinSave").onclick = async () => { const v = $("#pinNew").value; if (!/^\d{4,}$/.test(v)) return pm("Le code doit faire au moins 4 chiffres.", true); try { cfg.pin = await sha(v); applyCfg(); settings(); notice("Code enregistré."); } catch { pm("Impossible d’enregistrer le code sur ce système.", true); } };
+  const pd = $("#pinDel"); if (pd) pd.onclick = () => { cfg.pin = ""; applyCfg(); settings(); notice("Code retiré."); };
+  main.querySelectorAll("[data-delcourse]").forEach(b => b.onclick = () => { cfg.courses.splice(+b.dataset.delcourse, 1); applyCfg(); settings(); });
+  // --- Enregistrements / outils ---
+  invoke("get_audio_dir").then(d => { const el = $("#audioDir"); if (el) el.textContent = d; }).catch(() => { const el = $("#audioDir"); if (el) el.textContent = "indisponible hors de l’application"; });
+  $("#pickDir").onclick = async () => { try { const d = await invoke("pick", { kind: "folder" }); await invoke("set_audio_dir", { path: d.replace(/\/$/, "") }); $("#audioDir").textContent = d; notice("Dossier des enregistrements mis à jour (les anciens fichiers restent où ils sont)."); } catch (er) { if (errText(er) !== "Annulé.") notice(errText(er), true); } };
+  $("#openDir").onclick = async () => { try { await invoke("open_path", { path: $("#audioDir").textContent }); } catch (er) { notice(errText(er), true); } };
+  $("#checkDeps").onclick = checkInstallations;
+  (async () => { let v = APP_VERSION; try { v = await window.__TAURI__.app.getVersion(); } catch {} const el = $("#ver"); if (el) el.textContent = "Version " + v; })();
+}
+
+
+// ===== Rappels et alarmes : stockés en base (SQLite), notifiés par le système même fenêtre masquée =====
+const MONTHS = ["janvier","fevrier","mars","avril","mai","juin","juillet","aout","septembre","octobre","novembre","decembre"];
+const WEEKDAYS = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
+const pad2 = n => String(n).padStart(2, "0");
+const toLocalInput = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+// Comprend « demain 14h », « vendredi », « le 12 octobre », « 12/10 », « dans 2 jours », « dans 30 minutes »… sinon renvoie null.
+function parseDateFr(text, now = new Date()) {
+  const t = String(text).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[’']/g, "'");
+  const d = new Date(now); d.setSeconds(0, 0);
+  let hh = null, mm = 0, found = false;
+  const tm = t.match(/\b([01]?\d|2[0-3])\s*(?:h|:)\s*([0-5]\d)?(?!\d)/);
+  if (tm) { hh = +tm[1]; mm = tm[2] ? +tm[2] : 0; }
+  let m;
+  if ((m = t.match(/\bdans\s+(\d+|un|une)\s*(minute|min|heure|h|jour|semaine)s?\b/))) {
+    const n = /^\d+$/.test(m[1]) ? +m[1] : 1, u = m[2];
+    if (u.startsWith("min")) d.setMinutes(d.getMinutes() + n); else if (u === "heure" || u === "h") d.setHours(d.getHours() + n);
+    else d.setDate(d.getDate() + (u === "semaine" ? 7 * n : n));
+    return d;
+  }
+  if (/apres-demain|apres demain/.test(t)) { d.setDate(d.getDate() + 2); found = true; }
+  else if (/\bdemain\b/.test(t)) { d.setDate(d.getDate() + 1); found = true; }
+  else if (/aujourd'?hui|ce soir|ce matin/.test(t)) found = true;
+  else if ((m = t.match(/\b(\d{1,2})\s*\/\s*(\d{1,2})(?:\s*\/\s*(\d{2,4}))?\b/)) && +m[1] >= 1 && +m[1] <= 31 && +m[2] >= 1 && +m[2] <= 12) {
+    d.setMonth(+m[2] - 1, +m[1]); if (m[3]) d.setFullYear(m[3].length === 2 ? 2000 + +m[3] : +m[3]); else if (d < now) d.setFullYear(d.getFullYear() + 1); found = true;
+  } else if ((m = t.match(new RegExp(`\\b(\\d{1,2})(?:er)?\\s+(${MONTHS.join("|")})\\b`)))) {
+    d.setMonth(MONTHS.indexOf(m[2]), +m[1]); if (d < now) d.setFullYear(d.getFullYear() + 1); found = true;
+  } else if ((m = t.match(new RegExp(`\\b(${WEEKDAYS.join("|")})\\b`)))) {
+    let diff = (WEEKDAYS.indexOf(m[1]) - d.getDay() + 7) % 7; if (diff === 0) diff = 7; d.setDate(d.getDate() + diff); found = true;
+  } else if ((m = t.match(/\ble\s+(\d{1,2})(?:er)?\b/)) && +m[1] >= 1 && +m[1] <= 31) {
+    d.setDate(+m[1]); if (d < now) d.setMonth(d.getMonth() + 1); found = true;
+  }
+  if (!found && hh === null) return null;
+  d.setHours(hh ?? (/ce soir/.test(t) ? 18 : 8), hh === null ? 0 : mm, 0, 0);
+  if (d <= now) d.setTime(now.getTime() + 3600000);
+  return d;
+}
+const remState = { list: [], shown: new Set(), tab: "today" };
+const whenRem = secs => { const d = new Date(secs * 1000), day = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()), diff = Math.round((day(d) - day(new Date())) / 864e5); const h = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }); return `${diff === 0 ? "Aujourd’hui" : diff === 1 ? "Demain" : diff === -1 ? "Hier" : d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })} · ${h}`; };
+async function createReminder(title, suggestion) {
+  const def = suggestion ? parseDateFr(suggestion) : null, d0 = def || new Date(Date.now() + 3600000);
+  const r = await askForm("Nouveau rappel", [{ id: "title", label: "Titre", value: title || "" }, { id: "when", label: "Quand ?", type: "datetime-local", value: toLocalInput(d0) }, { id: "mins", label: "Ou dans … minutes (remplace la date)", type: "number", value: "" }]);
+  if (!r) return false;
+  if (!r.title.trim()) { notice("Donne un titre au rappel.", true); return false; }
+  let due = r.mins && +r.mins > 0 ? Date.now() + Math.round(+r.mins) * 60000 : new Date(r.when).getTime();
+  if (!Number.isFinite(due)) { notice("Date invalide : choisis une date et une heure.", true); return false; }
+  try { await invoke("add_reminder", { title: r.title.trim(), due: Math.floor(due / 1000) }); notice("Rappel programmé : " + whenRem(Math.floor(due / 1000))); if (view === "reminders") reminders(); return true; }
+  catch (er) { notice("Rappel impossible : " + errText(er), true); return false; }
+}
+async function reminders() {
+  try { remState.list = await invoke("list_reminders"); } catch (er) { main.innerHTML = `<h1>Rappels</h1><p class="msg err" role="alert">${esc(errText(er))}</p>`; return; }
+  if (view !== "reminders") return;
+  const now = Date.now() / 1000, sod = new Date(); sod.setHours(24, 0, 0, 0);
+  const eod = sod.getTime() / 1000, L = remState.list;
+  const groups = { today: L.filter(r => !r.done && r.due < eod), soon: L.filter(r => !r.done && r.due >= eod), done: L.filter(r => r.done).reverse() };
+  const tabs = { today: "Aujourd’hui", soon: "À venir", done: "Terminés" };
+  const row = r => `<div class="item" data-rid="${r.id}"><div class="t"><b>${esc(r.title)}</b> ${!r.done && r.due < now ? '<small class="rec">en retard</small>' : ""}<div class="mute">${esc(whenRem(r.due))}</div></div>
+    ${r.done ? `<button class="ghost sm" data-ract="undo">Rétablir</button>` : `<button class="primary sm" data-ract="done">Fait</button><button class="ghost sm" data-ract="snooze">Reporter 10 min</button><button class="ghost sm" data-ract="edit">Modifier</button>`}<button class="ghost sm danger" data-ract="del" aria-label="Supprimer le rappel ${esc(r.title)}">Supprimer</button></div>`;
+  main.innerHTML = `<h1>Rappels</h1><p class="mute lead">Les rappels te préviennent par une notification, même si Bullo est en arrière-plan.</p>
+  <div class="row"><button class="primary" id="newrem">+ Nouveau rappel</button><button class="ghost" id="newalarm">⏰ Alarme dans…</button><button class="ghost" id="testnotif">Tester la notification</button></div>
+  <div class="row chips" role="tablist" aria-label="Filtrer les rappels">${Object.entries(tabs).map(([k, l]) => `<button class="chip ${remState.tab === k ? "on" : ""}" role="tab" aria-selected="${remState.tab === k}" data-tab="${k}">${l} (${groups[k].length})</button>`).join("")}</div>
+  <div class="card" id="remlist">${groups[remState.tab].length ? groups[remState.tab].map(row).join("") : `<p class="mute" style="margin:0">${remState.tab === "done" ? "Aucun rappel terminé." : "Rien à signaler ici."}</p>`}</div>`;
+  $("#newrem").onclick = () => createReminder("", "");
+  $("#newalarm").onclick = async () => { const r = await askForm("Alarme", [{ id: "title", label: "Nom de l’alarme", value: "Alarme" }, { id: "mins", label: "Dans combien de minutes ?", type: "number", value: "25" }]); if (!r) return; const m = Math.round(+r.mins); if (!(m > 0)) return notice("Indique un nombre de minutes supérieur à 0.", true); try { await invoke("add_reminder", { title: r.title.trim() || "Alarme", due: Math.floor(Date.now() / 1000) + m * 60 }); notice(`Alarme dans ${m} min.`); reminders(); } catch (er) { notice(errText(er), true); } };
+  $("#testnotif").onclick = async () => { try { await invoke("notify", { title: "Bullo", body: "Les notifications fonctionnent." }); notice("Notification envoyée. Si rien n’apparaît : Réglages Système > Notifications, autorise « Éditeur de script »."); } catch (er) { notice(errText(er), true); } };
+  main.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { remState.tab = b.dataset.tab; reminders(); });
+  main.querySelectorAll("[data-rid]").forEach(el => el.querySelectorAll("[data-ract]").forEach(b => b.onclick = async () => {
+    const id = +el.dataset.rid, r = L.find(x => x.id === id), a = b.dataset.ract;
+    try {
+      if (a === "done") await invoke("update_reminder", { id, done: true });
+      else if (a === "undo") await invoke("update_reminder", { id, done: false });
+      else if (a === "snooze") { await invoke("update_reminder", { id, due: Math.floor(Date.now() / 1000) + 600 }); remState.shown.delete(id); }
+      else if (a === "del") { if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = "Sûr ?"; setTimeout(() => { delete b.dataset.sure; b.textContent = "Supprimer"; }, 3000); return; } await invoke("delete_reminder", { id }); }
+      else if (a === "edit") { const f = await askForm("Modifier le rappel", [{ id: "title", label: "Titre", value: r.title }, { id: "when", label: "Quand ?", type: "datetime-local", value: toLocalInput(new Date(r.due * 1000)) }]); if (!f) return; const due = new Date(f.when).getTime(); if (!Number.isFinite(due)) return notice("Date invalide.", true); await invoke("update_reminder", { id, title: f.title, due: Math.floor(due / 1000) }); remState.shown.delete(id); }
+      reminders();
+    } catch (er) { notice(errText(er), true); }
+  }));
+}
+// Filet de sécurité : si le système bloque les notifications, Bullo affiche quand même le rappel à l’écran.
+async function pollReminders() {
+  try {
+    const list = await invoke("list_reminders"), now = Date.now() / 1000;
+    for (const r of list) if (!r.done && r.due <= now && !remState.shown.has(r.id)) { remState.shown.add(r.id); notice("⏰ " + r.title, false, 12000); }
+    if (view === "reminders" && !document.querySelector(".modal")) reminders();
+  } catch {}
+}
+setInterval(pollReminders, 20000);
+
+// Focus : aucune horloge en tâche de fond, la durée est recalculée à l'affichage.
+const FK = KEYS.focus;
+function focusHtml() {
+  let f = null; try { f = JSON.parse(localStorage.getItem(FK)); } catch {}
+  if (!f) return "";
+  const m = Math.floor((Date.now() - f.t0) / 60000);
+  return `<div class="card"><h2 style="margin-top:0">Où j'en étais ?</h2><p>Tu travailles sur « ${esc(f.title)} » depuis ${m} min.${m >= 35 ? " Bon moment pour une pause, ou continue si ça roule." : ""}</p><button class="ghost" id="stop">Terminer le focus</button></div>`;
+}
+
+// Outils IA (Ollama local) : l'état vit hors de l'écran, comme pour Capturer.
+const TOOLS = {
+  corriger: ["Corriger", "Orthographe et grammaire, sans changer ton sens.", "Version corrigée"],
+  simplifier: ["Simplifier", "Un texte compliqué, expliqué en clair.", "En clair"],
+  decomposer: ["Décomposer", "Une grosse tâche en petites étapes.", "Étapes"],
+  bloque: ["Je suis bloqué", "Une seule petite première action.", "Première petite action"],
+  consigne: ["Consigne de devoir", "Ce qu'il faut rendre, et pour quand.", "Ce que je dois faire"],
+  reviser: ["Réviser", "Des questions pour tester ce que tu sais.", "Questions de révision"]
+};
+const TLK = "bullo_tools";
+const tl = { text: "", out: "", mode: "", busy: false, err: false };
+try { const d = JSON.parse(localStorage.getItem(TLK)); if (d) { tl.text = String(d.text || ""); tl.out = String(d.out || ""); tl.mode = TOOLS[d.mode] ? d.mode : ""; tl.err = !!d.err; if (d.pending && TOOLS[d.mode]) { tl.out = "Bullo s’est fermé pendant l’analyse : clique à nouveau sur l’outil pour la relancer."; tl.err = true; } } } catch {}
+const saveTl = () => { try { localStorage.setItem(TLK, JSON.stringify({ text: tl.text, out: tl.out, mode: tl.mode, err: tl.err, pending: tl.busy })); } catch {} };
+const stepLines = t => t.split("\n").map(x => x.trim().replace(/^(\d+\s*[.)]|[-•*])\s*/, "")).filter(Boolean);
+function qa(t) { // « 1. Question … Réponse : … » → cartes à déplier
+  const it = t.split(/\n\s*(?=\d+\s*[.)])/).map(b => b.trim()).filter(Boolean).map(b => {
+    const m = b.split(/Réponse\s*:/i); return m.length > 1 ? [m[0].replace(/^\d+\s*[.)]\s*/, "").trim(), m.slice(1).join("").trim()] : null; });
+  return it.length && it.every(Boolean) ? it : null;
+}
+// Erreur « il manque un outil » : « [[install:xxx]] message » -> texte + bouton « Installer et réessayer ».
+const installCode = t => (String(t).match(/^\[\[install:([a-z-]+)\]\]/) || [])[1] || "";
+const stripCode = t => String(t).replace(/^\[\[install:[a-z-]+\]\]/, "");
+function outHtml() {
+  if (tl.err) { const c = installCode(tl.out); return `<div class="card"><p class="err" style="margin:0" role="alert">${esc(stripCode(tl.out))}</p>${c ? `<div class="row"><button class="primary sm" id="doinstall" data-id="${c}">Installer automatiquement et réessayer</button></div><p class="msg" id="instmsg" role="status">Nécessite Homebrew. L’installation peut durer quelques minutes.</p>` : ""}</div>`; }
+  if (tl.busy) return `<div class="card" role="status" aria-live="polite"><div class="sk"></div><div class="sk"></div><div class="sk s"></div><p class="msg" style="margin-bottom:0">Analyse en cours… Tu peux changer d'onglet, ça continue.</p></div>`;
+  if (!tl.out) return "";
+  const m = tl.mode, q = m === "reviser" ? qa(tl.out) : null;
+  const body = m === "decomposer" ? `<ol class="steps">${stepLines(tl.out).map(l => `<li>${esc(l)}</li>`).join("")}</ol>`
+    : q ? `<div class="qa">${q.map(([a, r], i) => `<details><summary><span class="n">${i + 1}</span><span>${esc(a)}</span></summary><p>${esc(r)}</p></details>`).join("")}</div><p class="msg">Réponds dans ta tête, puis déplie pour vérifier.</p>`
+    : `<div class="out">${esc(tl.out)}</div>`;
+  return `<div class="card res"><h2 style="margin-top:0">${TOOLS[m][2]}</h2>${body}
+    <div class="row"><button class="primary sm" id="cp">${ico("copy")}<span>Copier</span></button><button class="ghost sm" id="exportout">Exporter (.txt)</button><button class="ghost sm" id="savenoteout">Enregistrer comme note</button>
+    ${m === "decomposer" ? `<button class="ghost sm" id="addt">Ajouter comme tâches</button>` : ""}
+    ${m === "corriger" ? `<button class="ghost sm" id="usetx">Utiliser comme texte</button>` : ""}</div></div>`;
+}
+function favsHtml() {
+  const rows = favs.slice().reverse().map(f => `<div class="pk" data-at="${f.at}" data-k="${f.k}"><span>${f.k === "ambient" ? "🌧 " + esc(f.title) + ' <small class="mute">ambiance</small>' : "♪ " + esc(f.title) + (f.artist ? " — " + esc(f.artist) : "") + (f.app ? ` <small class="mute">${esc(f.app)}</small>` : "")}</span><span class="row">${f.k === "track" ? '<button class="ghost sm" data-fs="1">Rechercher</button>' : ""}<button class="ghost sm" data-fd="1" aria-label="Retirer des favoris">Retirer</button></span></div>`).join("");
+  return `<h2>Mes favoris du lecteur</h2><p class="mute">Appuie sur ☆ dans le lecteur pour garder une ambiance ou le titre en cours. Les titres se recherchent ensuite sur Spotify.</p>${rows || '<p class="mute">Aucun favori pour l’instant.</p>'}`;
+}
+function bindFavs() {
+  const box = $("#favCard"); if (!box) return;
+  box.onclick = e => {
+    const row = e.target.closest(".pk"); if (!row) return; const f = favs.find(x => String(x.at) === row.dataset.at && x.k === row.dataset.k); if (!f) return;
+    if (e.target.closest("[data-fd]")) { favs = favs.filter(x => x !== f); saveFavs(); box.innerHTML = favsHtml(); bgUi(); }
+    else if (e.target.closest("[data-fs]")) openWeb("https://open.spotify.com/search/" + encodeURIComponent((f.title + " " + f.artist).trim()));
+  };
+}
+function bindDiag() {
+  const out = $("#diagOut"), msg = $("#diagMsg"), cp = $("#diagCopy");
+  $("#diag").onclick = async function () { this.disabled = true; msg.textContent = "Analyse en cours…"; try { const t = await invoke("player_diagnostic"); out.textContent = t; out.hidden = false; cp.hidden = false; msg.textContent = ""; } catch (er) { msg.className = "msg err"; msg.textContent = errText(er); } this.disabled = false; };
+  $("#diagKey").onclick = async () => { try { msg.className = "msg ok"; msg.textContent = await invoke("media_key_test"); } catch (er) { msg.className = "msg err"; msg.textContent = errText(er); } };
+  cp.onclick = async () => { try { await navigator.clipboard.writeText(out.textContent); msg.className = "msg ok"; msg.textContent = "Copié."; } catch { msg.className = "msg err"; msg.textContent = "Copie impossible : sélectionne le texte à la main."; } };
+}
+async function openWeb(url) { try { await invoke("open_web", { url }); } catch (er) { notice(errText(er), true); } }
+
+// ===== Bien-être : parking de pensées, respiration guidée, pauses douces =====
+const br = { run: 0 };
+const PARK = "💭 ";
+async function parkThought() {
+  if ($("#lock") || document.querySelector(".modal")) return;
+  const r = await askForm("Parking de pensées", [{ id: "t", label: "Qu’est-ce qui te traverse l’esprit ? Note-le ici, je le garde pour plus tard." }]);
+  const t = r && r.t.trim(); if (!t) return;
+  try { await invoke("add_item", { kind: "note", title: PARK + t.split("\n")[0].slice(0, 110), body: t.includes("\n") || t.length > 110 ? t : "" }); notice("C’est noté, c’est en sécurité. Tu peux reprendre ce que tu faisais 🙂"); if (view === "calm") calm(); }
+  catch (er) { notice(errText(er), true); }
+}
+const BREATHS = {
+  box: { name: "Respiration carrée", d: "4 s inspire · 4 s retiens · 4 s expire · 4 s retiens. Calme vite le stress.", ph: [["Inspire", 4], ["Retiens", 4], ["Expire", 4], ["Retiens", 4]] },
+  s478: { name: "4-7-8", d: "4 s inspire · 7 s retiens · 8 s expire. Pour s’apaiser ou s’endormir.", ph: [["Inspire", 4], ["Retiens", 7], ["Expire", 8]] },
+  coh: { name: "Cohérence 5-5", d: "5 s inspire · 5 s expire. Simple et régulier.", ph: [["Inspire", 5], ["Expire", 5]] }
+};
+const BREAK_TIPS = ["💧 Bois un peu d’eau.", "🧍 Lève-toi et étire-toi une minute.", "👀 Regarde au loin pendant 20 secondes.", "🌬️ Trois grandes respirations, doucement.", "🍎 Une petite collation ?"];
+let lastBreak = Date.now(), tipI = 0;
+setInterval(() => {
+  const m = +cfg?.breakEvery || 0; if (!m || cap?.mr || Date.now() - lastBreak < m * 60000) return;
+  lastBreak = Date.now(); const tip = BREAK_TIPS[tipI++ % BREAK_TIPS.length];
+  notice("Pause douce : " + tip, false, 12000);
+  if (document.hidden) invoke("notify", { title: "Pause douce", body: tip }).catch(() => {});
+}, 20000);
+async function calm() {
+  const items = (await invoke("list_items", { kind: "note" })).filter(i => (i.title || "").startsWith(PARK)).reverse();
+  if (view !== "calm") return;
+  main.innerHTML = `<h1>Bien-être</h1><p class="mute lead">Des petits outils pour garder la tête claire. Rien n’est obligatoire.</p>
+  <section class="card"><h2 style="margin-top:0">💭 Parking de pensées</h2><p class="mute">Une idée ou une inquiétude te parasite en plein travail ? Note-la en dix secondes avec <b>${esc(cfg.shortcuts.park || "le bouton")}</b>, puis retourne à ce que tu faisais. Tu la trieras plus tard.</p>
+    <div class="row"><button class="primary" id="park">Garder une pensée pour plus tard</button></div>
+    <div id="parked">${items.length ? items.map(i => `<div class="pk" data-id="${i.id}"><span>${esc(i.title.slice(PARK.length))}</span><span class="row"><button class="ghost sm" data-a="task">En faire une tâche</button><button class="ghost sm" data-a="del" aria-label="Supprimer cette pensée">Supprimer</button></span></div>`).join("") : '<p class="mute">Aucune pensée en attente.</p>'}</div></section>
+  <section class="card"><h2 style="margin-top:0">🌬️ Respiration guidée</h2>
+    <label>Rythme<select id="brsel">${Object.entries(BREATHS).map(([k, v]) => `<option value="${k}">${esc(v.name)}</option>`).join("")}</select></label><p class="mute" id="brdesc">${esc(BREATHS.box.d)}</p>
+    <div class="breath" aria-hidden="false"><div id="bcircle" class="bcircle"><span id="bphase">Prêt ?</span><small id="bcount"></small></div></div>
+    <div class="row"><button class="primary" id="brgo">Commencer (6 cycles)</button></div><p class="msg" id="brmsg" role="status"></p></section>
+  <section class="card"><h2 style="margin-top:0">⏰ Pauses douces</h2><p class="mute">Un rappel discret pour boire, bouger et reposer les yeux. Les rappels se mettent en pause pendant un enregistrement.</p>
+    <label>Me rappeler<select id="brk">${[[0, "Jamais"], [20, "Toutes les 20 minutes"], [30, "Toutes les 30 minutes"], [45, "Toutes les 45 minutes"], [60, "Toutes les heures"]].map(([v, l]) => `<option value="${v}" ${cfg.breakEvery === v ? "selected" : ""}>${l}</option>`).join("")}</select></label></section>`;
+  $("#park").onclick = parkThought;
+  $("#parked").onclick = async e => {
+    const b = e.target.closest("button[data-a]"); if (!b) return; const id = +b.closest(".pk").dataset.id, it = items.find(x => x.id === id); if (!it) return;
+    try {
+      if (b.dataset.a === "task") await invoke("add_item", { kind: "tache", title: it.title.slice(PARK.length), body: "" });
+      await invoke("delete_item", { id }); calm();
+    } catch (er) { notice(errText(er), true); }
+  };
+  $("#brk").onchange = e => { cfg.breakEvery = +e.target.value; lastBreak = Date.now(); applyCfg(); notice(cfg.breakEvery ? "Je te rappellerai doucement 🙂" : "Rappels désactivés."); };
+  $("#brsel").onchange = e => { $("#brdesc").textContent = BREATHS[e.target.value].d; };
+  const go = $("#brgo");
+  go.onclick = async () => {
+    if (go.dataset.on) { br.run++; return; }
+    const pat = BREATHS[$("#brsel").value], my = ++br.run, circle = $("#bcircle"), ph = $("#bphase"), ct = $("#bcount"), msg = $("#brmsg");
+    go.dataset.on = 1; go.textContent = "Arrêter"; msg.textContent = "";
+    const alive = () => my === br.run && view === "calm";
+    outer: for (let c = 0; c < 6; c++) for (const [label, sec] of pat.ph) {
+      if (!alive()) break outer;
+      ph.textContent = label;
+      circle.style.transitionDuration = sec + "s"; circle.classList.toggle("big", label === "Inspire" || (label === "Retiens" && circle.classList.contains("big")));
+      for (let t = sec; t > 0; t--) { if (!alive()) break outer; ct.textContent = t; await new Promise(r => setTimeout(r, 1000)); }
+    }
+    const finished = alive(); delete go.dataset.on;
+    if ($("#brgo")) { go.textContent = "Commencer (6 cycles)"; ph.textContent = "Prêt ?"; ct.textContent = ""; circle.classList.remove("big"); if (finished) msg.textContent = "Bien joué 🙂 Comment tu te sens ?"; }
+  };
+}
+
+async function tools() {
+  const cours = (await invoke("list_items", { kind: "cours" })).filter(c => dataOf(c) || c.body);
+  if (view !== "tools") return;
+  main.innerHTML = `<h1>Outils</h1><p class="mute lead">Écris comme tu peux. Ton texte original n'est jamais modifié.</p>
+  <div class="stepl"><b class="step">1</b>Ton texte</div>
+  <div class="card editor"><textarea id="tt" placeholder="Ton texte, ta tâche, ou où tu bloques…" aria-label="Ton texte">${esc(tl.text)}</textarea>
+   <div class="row tbar"><button class="ghost sm" id="imp">${ico("import")}<span>Importer un fichier (PDF, Word, texte, image)</span></button><input id="file-upload" type="file" accept=".pdf,.docx" hidden>
+   ${cours.length ? `<select id="lc" class="sm" aria-label="Charger un cours"><option value="">Charger un cours…</option>${cours.map(c => `<option value="${c.id}">${esc(courseOf(c) || "Cours")} · ${esc(when(c.created))}</option>`).join("")}</select>` : ""}
+   <button class="ghost sm" id="clr" style="margin-left:auto" ${tl.text ? "" : "hidden"}>${ico("x")}<span>Effacer</span></button></div></div>
+  <p class="msg err" id="hint" role="alert"></p>
+  <div class="stepl"><b class="step">2</b>Que veux-tu faire ?</div>
+  <div class="tgrid">${Object.entries(TOOLS).map(([k, [t, d]]) => `<button class="tile ${tl.mode === k && !tl.err ? "on" : ""}" data-m="${k}" ${tl.busy ? "disabled" : ""}><span class="tico">${ico(k, 22)}</span><b>${t}</b><small>${d}</small></button>`).join("")}</div>
+  <div id="res">${outHtml()}</div>`;
+  saveTl(); const tt = $("#tt");
+  tt.oninput = ev => { tl.text = ev.target.value; saveTl(); $("#clr").hidden = !tl.text; $("#hint").textContent = ""; };
+  $("#clr").onclick = () => { tl.text = ""; tl.out = ""; tl.mode = ""; tl.err = false; tools(); };
+  const lc = $("#lc"); if (lc) lc.onchange = () => {
+    const c = cours.find(x => x.id === +lc.value); if (!c) return;
+    tl.text = (dataOf(c) || {}).transcript || c.body; tl.out = ""; tl.err = false; tools();
+  };
+  main.querySelectorAll("[data-m]").forEach(b => b.onclick = async () => {
+    if (tl.busy) return;
+    if (!tl.text.trim()) { $("#hint").textContent = "Écris ou colle d'abord un texte, puis choisis un outil."; tt.focus(); return; }
+    tl.mode = b.dataset.m; tl.busy = true; tl.out = ""; tl.err = false; saveTl(); tools();
+    try { tl.out = await invoke("assist", { mode: tl.mode, text: tl.text }); } catch (er) { tl.out = errText(er); tl.err = true; }
+    tl.busy = false; saveTl(); if (view !== "tools") notice(tl.err ? "L’outil a échoué : " + tl.out : "Ton résultat est prêt dans Outils.", tl.err, 9000); if (view === "tools") tools();
+  });
+  const importFrom = async f => {
+    tl.lastImport = f;
+    try {
+      const ext = f.split(".").pop().toLowerCase();
+      if (!["pdf", "docx", "txt", "md", "rtf", "png", "jpg", "jpeg"].includes(ext)) throw "Choisis un fichier PDF, Word (.docx), texte (.txt, .md) ou image (.png, .jpg).";
+      tl.text = (tl.text ? tl.text + "\n\n" : "") + await invoke("import_text", { path: f }); tl.err = false; tl.out = ""; tl.lastImport = "";
+    } catch (er) { if (errText(er) !== "Annulé.") { tl.out = errText(er); tl.err = true; tl.mode = ""; } else tl.lastImport = ""; }
+    saveTl(); tools();
+  };
+  $("#imp").onclick = async () => { try { importFrom(await invoke("pick", { kind: "file" })); } catch (er) { if (errText(er) !== "Annulé.") { tl.out = errText(er); tl.err = true; saveTl(); tools(); } } };
+  const di = $("#doinstall");
+  if (di) di.onclick = async () => {
+    di.disabled = true; di.textContent = "Installation en cours…"; $("#instmsg").textContent = "Patiente, ne ferme pas Bullo…";
+    try { await invoke("install_dependency", { id: di.dataset.id }); notice("Installation terminée."); if (tl.lastImport) return importFrom(tl.lastImport); tl.out = ""; tl.err = false; saveTl(); tools(); }
+    catch (er) { di.disabled = false; di.textContent = "Réessayer l’installation"; $("#instmsg").className = "msg err"; $("#instmsg").textContent = errText(er); }
+  };
+  $("#file-upload").onchange = async ev => { const f=ev.target.files[0]; if(!f)return; try { if(!/\.(pdf|docx)$/i.test(f.name)) throw "Choisis un fichier PDF ou Word (.docx)."; const path=f.path; if(!path) throw "Utilise le sélecteur natif pour importer ce fichier dans l’application."; tl.text=(tl.text?tl.text+"\n\n":"")+await invoke("import_text",{path}); tl.err=false; tl.out=""; } catch(er){tl.out=errText(er);tl.err=true;} tools(); };
+  const ex = $("#exportout"); if (ex) ex.onclick = () => downloadText(tl.out, "txt", "bullo-outil"); const sn=$("#savenoteout"); if(sn) sn.onclick=()=>saveAsNote(tl.out);
+  const cp = $("#cp"); if (cp) cp.onclick = async () => { const ok = await copyText(tl.out); $("span", cp).textContent = ok ? "Copié" : "Copie impossible"; };
+  const ut = $("#usetx"); if (ut) ut.onclick = () => { tl.text = tl.out; tl.out = ""; tl.mode = ""; tools(); };
+  const ad = $("#addt"); if (ad) ad.onclick = async () => {
+    ad.disabled = true; for (const l of stepLines(tl.out)) await invoke("add_item", { kind: "tache", title: l, body: "" });
+    nav("home");
+  };
+}
+
+// Rechercher : mot libre + boutons par cours. Un cours choisi sans mot = tout son contenu.
+const sv = { q: "", course: "" };
+function searchView() {
+  main.innerHTML = `<h1>Rechercher</h1><input id="q" type="search" placeholder="Qu'est-ce que tu cherches ?" value="${esc(sv.q)}" autofocus>
+  <div class="row chips" role="group" aria-label="Filtrer par cours"><button class="chip ${sv.course ? "" : "on"}" data-c="" aria-pressed="${!sv.course}">Tout</button>
+  ${cfg.courses.map(c => `<button class="chip ${sv.course === c ? "on" : ""}" data-c="${esc(c)}" aria-pressed="${sv.course === c}">${esc(c)}</button>`).join("")}</div><div id="out"></div>`;
+  const run = async () => {
+    const q = sv.q.trim(), o = $("#out");
+    if (!q && !sv.course) { o.innerHTML = `<p class="msg">Tape un mot, ou choisis un cours pour voir tout ce qu'il contient.</p>`; return; }
+    const r = await invoke("search", { q, course: sv.course || null });
+    if (view !== "search") return;
+    o.innerHTML = r.length ? `<p class="msg">${r.length} résultat${r.length > 1 ? "s" : ""}</p>` + r.map(i => itemRow(i)).join("")
+      : `<p class="msg">Aucun résultat${q ? ` pour « ${esc(q)} »` : ""}${sv.course ? ` dans ${esc(sv.course)}` : ""}.</p>`;
+    bindList();
+  };
+  let t; $("#q").oninput = () => { sv.q = $("#q").value; clearTimeout(t); t = setTimeout(run, 250); };
+  main.querySelectorAll("[data-c]").forEach(b => b.onclick = () => {
+    sv.course = b.dataset.c;
+    main.querySelectorAll("[data-c]").forEach(x => { const on = x === b; x.classList.toggle("on", on); x.setAttribute("aria-pressed", on); });
+    run();
+  });
+  run();
+}
+ttsInit(); bgInit(); applyCfg(); pomWidget(); lock(); setTimeout(pollReminders, 1500);
+nav("home");
+// Si la police choisie n'est plus disponible, on le dit explicitement et on revient à la police par défaut.
+fontsReady = loadAppFonts().then(() => checkAllFonts());
+fontsReady.then(() => checkFont(fontDef(cfg.font))).then(ok => {
+  if (ok) return;
+  notice(`La police « ${fontDef(cfg.font).label.split(" (")[0]} » est introuvable : retour à la police par défaut.`, true, 9000);
+  cfg.font = "body"; applyCfg(); if (view === "settings") settings();
+});
+</script>
+</body>
+</html>
