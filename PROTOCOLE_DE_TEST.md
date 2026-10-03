@@ -89,3 +89,22 @@ Coche une case uniquement après l'avoir testé dans l'application (`npm run tau
 - [ ] Clair, sombre, contraste élevé, thème doux : tout reste lisible, le focus clavier est visible
 - [ ] Lecteur : le dock ne cache aucun contenu (faire défiler jusqu'en bas), les barres bougent seulement pendant la lecture
 - [ ] Fenêtre étroite : le menu se réduit aux icônes
+## 5 octies — Explique-moi (v1.2)
+Avec **Ollama lancé** et le modèle de résumé téléchargé :
+- [ ] Le menu contient « Explique-moi » ; en ouvrant l'appli, rien ne s'ouvre tout seul.
+- [ ] Sujet vide ou explication très courte : un message te demande de compléter, sans appel au modèle.
+- [ ] Sujet + explication écrite, « Commencer » : un indicateur de chargement apparaît, puis 1 à 3 questions courtes.
+- [ ] Les questions ne donnent pas la réponse (si le modèle en donne une, note-le).
+- [ ] Changer de page pendant que le modèle réfléchit : l'appli reste fluide, un message prévient quand la question est prête.
+- [ ] Répondre : 3 séries au maximum, puis le bilan (Solide / À revoir, sous forme de sujets).
+- [ ] « Voir mon bilan » avant la fin et « Arrêter » à tout moment fonctionnent.
+- [ ] « Écouter les questions » et « Écouter le bilan » lisent le texte à voix haute.
+- [ ] Dictée à l'oral : « Dicter à l'oral », parler 10 secondes, terminer : le texte arrive dans la zone, modifiable (micro autorisé).
+- [ ] « Mes explications » : la séance est là (sujet, date), on peut l'ouvrir, la relire, la supprimer (avec confirmation).
+- [ ] Après avoir fermé et rouvert Bullo, l'historique est toujours là.
+- [ ] Polices (OpenDyslexic, Lexend…), tailles et thème sombre : la page les respecte.
+- [ ] Fin d'un Pomodoro de travail (si activé) : un bandeau propose « Explique-moi », sans l'ouvrir. Après un résumé dans Capturer : un bouton « Explique-moi » est proposé.
+
+Avec **Ollama fermé** :
+- [ ] « Commencer » affiche « Cette fonctionnalité a besoin d'Ollama. Ouvre l'application Ollama, puis réessaie. », rien ne plante, ton texte est conservé.
+- [ ] Après avoir ouvert Ollama, « Commencer » fonctionne sans retaper.

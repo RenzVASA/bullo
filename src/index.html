@@ -17,6 +17,7 @@
   <button data-v="reminders"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0112 0v5l2 2H4z"/><path d="M10 21h4"/></svg><span>Rappels</span></button>
   <button data-v="search"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><span>Rechercher</span></button>
   <button data-v="tools"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 6a4 4 0 005 5l-9 9a2.1 2.1 0 01-3-3l9-9z"/><path d="M14 6l-3-3"/></svg><span>Outils</span></button>
+  <button data-v="explain"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.6 8.6 0 0 1-3.8-.9L3 21l1.9-5.3A8.4 8.4 0 1 1 21 11.5z"/></svg><span>Explique-moi</span></button>
   <button data-v="calm"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21C7 17 4 14 4 10a4.5 4.5 0 018-2.8A4.5 4.5 0 0120 10c0 4-3 7-8 11z"/></svg><span>Bien-être</span></button>
   <div id="pill" hidden role="status"></div>
   <button id="me" data-v="settings" class="ghost" style="margin-top:auto"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg><span>Réglages</span></button>
@@ -41,7 +42,7 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "
 const errText = x => (x && x.message) ? x.message : String(x);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const main = $("#main");
-const APP_VERSION = "1.1.0", ABOUT_CREDIT = "Vibe codé par Renz-VASA, avec un peu d’intelligence artificielle ✨";
+const APP_VERSION = "1.2.0", ABOUT_CREDIT = "Vibe codé par Renz-VASA, avec un peu d’intelligence artificielle ✨";
 
 // Clés de stockage locales (préfixe bullo_). Les anciennes clés de la version précédente sont migrées une seule fois, puis supprimées.
 const KEYS = { cfg: "bullo_cfg", tags: "bullo_tags", vers: "bullo_note_versions", draft: "bullo_draft", focus: "bullo_focus", pom: "bullo_pom_enabled", googleWhen: "bullo_google_when" };
@@ -208,7 +209,7 @@ const pomTotal = () => (pom.phase === "work" ? clamp(+cfg.pomodoro || 25, 1, 120
 const pomLeft = () => pom.running ? Math.max(0, pom.end - Date.now()) : (pom.left ?? pomTotal());
 function pomTick() {
   const el = $("#pom-time"); if (!el) return;
-  if (pom.running && Date.now() >= pom.end) { const was = pom.phase; pom.running = false; pom.left = null; pom.phase = was === "work" ? "break" : "work"; notice(was === "work" ? "Pomodoro terminé : place à la pause !" : "Pause terminée : on reprend quand tu veux.", false, 8000); }
+  if (pom.running && Date.now() >= pom.end) { const was = pom.phase; pom.running = false; pom.left = null; pom.phase = was === "work" ? "break" : "work"; if (was === "work") setTimeout(exBanner, 300); notice(was === "work" ? "Pomodoro terminé : place à la pause !" : "Pause terminée : on reprend quand tu veux.", false, 8000); }
   el.textContent = fmt(Math.ceil(pomLeft() / 1000)); $("#pom-phase").textContent = pom.phase === "work" ? "Travail" : "Pause";
   $("#pom-start").disabled = pom.running; $("#pom-pause").disabled = !pom.running;
 }
@@ -242,7 +243,7 @@ function nav(v) {
   view = v; if (v !== "home") document.body.classList.remove("single-task-active");
   document.querySelectorAll("nav [data-v]").forEach(b => b.classList.toggle("on", b.dataset.v === v));
   br.run++;
-  try { ({ home, capture, inbox, reminders, search: searchView, tools, calm, settings })[v](); }
+  try { ({ home, capture, inbox, reminders, search: searchView, tools, explain: explainView, calm, settings })[v](); }
   catch (er) {
     console.error("Erreur d’affichage (" + v + ") :", er);
     main.innerHTML = `<h1>Oups</h1><p class="msg err" role="alert">Cette page n’a pas pu s’afficher : ${esc(errText(er))}</p><p>Tes notes et tes enregistrements sont intacts. Le bouton ci-dessous efface seulement le brouillon en cours.</p><div class="row"><button class="primary" id="fixDraft">Réparer</button></div>`;
@@ -417,7 +418,7 @@ function resultHtml() {
     ${cap.audio ? `<audio id="original-audio" controls preload="metadata" style="width:100%" hidden></audio><p class="msg" id="original-msg" role="status"></p>` : ""}
     ${list("À retenir", r.a_retenir)}${list("Devoirs", r.taches)}${list("Dates", r.echeances)}${list("Questions pour le prof", r.questions)}
     ${remindHtml(r)}
-    ${cap.choose ? chooser() : `<div class="row"><button class="primary" id="save">Enregistrer dans un cours</button></div>`}</div>`;
+    ${cap.choose ? chooser() : `<div class="row"><button class="primary" id="save">Enregistrer dans un cours</button><button class="ghost" id="exFromCap">Explique-moi</button></div>`}</div>`;
 }
 
 // Le modèle d'IA renvoie parfois une forme inattendue (une phrase au lieu d'une liste, un objet…). On remet tout au propre,
@@ -443,7 +444,7 @@ function capture() {
   $("#rec").onclick = toggleRec; $("#sum").onclick = summarize; const rx = $("#retx"); if (rx) rx.onclick = transcribeAudio; $("#exporttx").onclick = () => exportTranscript(cap.text); $("#savenote").onclick = () => saveAsNote(cap.text); $("#tx").oninput = ev => { cap.text = ev.target.value; saveDraft(); };
   if (cap.result) {
     if (cap.choose) { main.querySelectorAll("[data-course]").forEach(b => b.onclick = () => save(b.dataset.course)); $("#addc").onclick = () => save($("#nc").value.trim()); }
-    else $("#save").onclick = () => { cap.choose = true; saveDraft(); capture(); };
+    else { $("#save").onclick = () => { cap.choose = true; saveDraft(); capture(); }; const ef = $("#exFromCap"); if (ef) ef.onclick = () => exOpen(); }
     const speak = $("#speak-result"); if (speak) speak.onclick = () => readAloud([cap.result.resume, ...(cap.result.a_retenir || []).map(x => typeof x === "string" ? x : "")].filter(Boolean).join(". "));
     main.querySelectorAll("[data-remind]").forEach(b => b.onclick = () => { const items = [...(cap.result.taches || []), ...(cap.result.echeances || [])].map(x => typeof x === "string" ? x : JSON.stringify(x)).filter(Boolean), t = items[+b.dataset.remind]; createReminder(t, t); });
     const orig = $("#load-original");
@@ -911,11 +912,12 @@ function showUpdate(u, manual) {
     if (!manual) updBanner(u);
   } else if (out) { out.className = "msg"; out.textContent = `✅ Bullo est à jour (version ${u.current}).`; }
 }
+const bannerHost = () => $("#banners") || document.body.appendChild(Object.assign(document.createElement("div"), { id: "banners" }));
 function updBanner(u) {
   if ($("#updBanner")) return;
   const d = document.createElement("div"); d.id = "updBanner"; d.className = "upd-banner"; d.setAttribute("role", "status");
   d.innerHTML = `<span>Bullo ${esc(u.latest)} est disponible.</span><button class="primary sm" id="updBannerGo">Voir</button><button class="ghost sm" id="updBannerNo" aria-label="Plus tard">Plus tard</button>`;
-  document.body.appendChild(d);
+  bannerHost().appendChild(d);
   $("#updBannerGo").onclick = () => { invoke("open_web", { url: u.url }).catch(er => notice(errText(er), true)); d.remove(); };
   $("#updBannerNo").onclick = () => d.remove();
 }
@@ -1458,6 +1460,181 @@ async function tools() {
     ad.disabled = true; for (const l of stepLines(tl.out)) await invoke("add_item", { kind: "tache", title: l, body: "" });
     nav("home");
   };
+}
+
+// ===== « Explique-moi » (méthode Feynman) =====
+// L'utilisateur explique ce qu'il vient d'apprendre ; un « élève de 12 ans » (modèle local, Ollama) pose des questions sur les trous,
+// sans jamais donner la réponse. Rien ne démarre tout seul : tout passe par le bouton « Explique-moi ». Tout reste sur l'ordinateur.
+const EX_MAX_ROUNDS = 3;            // nombre maximum de séries de questions
+const EX_MIN_CHARS = 20;            // une explication trop courte ne donne rien à questionner
+const ex = { page: "start", topic: "", text: "", ans: "", turns: [], bilan: null, id: null, busy: "", err: "", mr: null, dictating: "", dictMsg: "", open: null, confirm: null, list: [] };
+
+function exReset() { Object.assign(ex, { page: "start", topic: "", text: "", ans: "", turns: [], bilan: null, id: null, busy: "", err: "", dictMsg: "", open: null, confirm: null }); }
+function exOpen(topic) { if (ex.busy || ex.mr) { nav("explain"); return; } if (ex.page === "bilan" || ex.page === "history") exReset(); if (topic && ex.page === "start" && !ex.topic) ex.topic = topic; nav("explain"); }
+
+// Messages envoyés au modèle : l'explication, puis chaque question / réponse déjà échangée.
+function exMessages() {
+  const m = [{ role: "user", content: `Sujet : ${ex.topic}\n\nMon explication :\n${ex.text}` }];
+  for (const t of ex.turns) { m.push({ role: "assistant", content: t.q }); if (t.a) m.push({ role: "user", content: t.a }); }
+  return m;
+}
+// Message clair et bienveillant, sans jargon, quand Ollama n'est pas prêt.
+function exFriendly(er) {
+  const t = errText(er);
+  if (/Ollama ne répond pas/i.test(t)) return "Cette fonctionnalité a besoin d’Ollama. Ouvre l’application Ollama, puis réessaie.";
+  if (/mod[èe]le/i.test(t) && /pas t[ée]l[ée]charg/i.test(t)) return "Le modèle de résumé n’est pas encore téléchargé. Va dans Réglages, « Vérifier les outils », puis « Télécharger ». Ensuite, réessaie.";
+  return t;
+}
+function parseBilan(raw) {
+  const t = String(raw || "").replace(/\r/g, ""), i = t.search(/[àa]\s*revoir\s*:?/i);
+  const items = s => s.split("\n").map(x => x.replace(/^[\s\-–•*·\d.)]+/, "").replace(/\*\*/g, "").trim()).filter(Boolean);
+  const head = i >= 0 ? t.slice(0, i) : t, tail = i >= 0 ? t.slice(i).replace(/^[àa]\s*revoir\s*:?\**/i, "") : "";
+  const solide = items(head.replace(/^[\s*_#]*solide\s*:?\**/i, "")), revoir = items(tail);
+  return solide.length || revoir.length ? { solide, revoir } : { solide: [t.trim()].filter(Boolean), revoir: [] };
+}
+const exSave = async () => {
+  try { ex.id = await invoke("explain_save", { id: ex.id, topic: ex.topic, explanation: ex.text, turns: JSON.stringify(ex.turns), bilan: ex.bilan ? JSON.stringify(ex.bilan) : "" }); }
+  catch (er) { notice("Séance non sauvegardée : " + errText(er), true); }
+};
+const exRender = () => { if (view === "explain") explainView(); };
+
+async function exStart() {
+  if (ex.busy) return;
+  ex.topic = ex.topic.trim(); ex.text = ex.text.trim();
+  if (!ex.topic) { ex.err = "Écris d’abord le sujet (quelques mots)."; return exRender(); }
+  if (ex.text.length < EX_MIN_CHARS) { ex.err = "Ton explication est très courte : écris-en un peu plus pour que je puisse poser de bonnes questions."; return exRender(); }
+  ex.err = ""; ex.turns = []; ex.bilan = null; ex.id = null; await exAsk();
+}
+// Demande la prochaine série de questions. L'état est gardé hors de l'écran : on peut changer de page pendant que le modèle réfléchit.
+async function exAsk() {
+  ex.busy = "Je réfléchis à tes explications…"; ex.err = ""; exRender();
+  try {
+    const q = await invoke("explain_turn", { topic: ex.topic, messages: exMessages(), bilan: false });
+    ex.turns.push({ q, a: "" }); ex.ans = ""; ex.page = "talk"; ex.busy = ""; await exSave();
+    if (view !== "explain") notice("Une question t’attend dans Explique-moi.", false, 6000);
+  } catch (er) { ex.busy = ""; ex.err = exFriendly(er); }
+  exRender();
+}
+async function exAnswer() {
+  if (ex.busy) return;
+  const a = ex.ans.trim(); if (!a) { ex.err = "Écris (ou dicte) ta réponse, ou termine avec le bilan."; return exRender(); }
+  ex.turns[ex.turns.length - 1].a = a; ex.err = "";
+  if (ex.turns.length >= EX_MAX_ROUNDS) return exFinish();
+  await exAsk();
+}
+async function exFinish() {
+  if (ex.busy) return;
+  const last = ex.turns[ex.turns.length - 1]; if (last && !last.a && ex.ans.trim()) last.a = ex.ans.trim();
+  ex.busy = "Je prépare ton bilan…"; ex.err = ""; exRender();
+  try {
+    const raw = await invoke("explain_turn", { topic: ex.topic, messages: exMessages(), bilan: true });
+    ex.bilan = parseBilan(raw); ex.page = "bilan"; ex.busy = ""; await exSave();
+  } catch (er) { ex.busy = ""; ex.err = exFriendly(er); }
+  exRender();
+}
+// Arrêter à tout moment : on garde ce qui a été fait, sans bilan.
+async function exStop() {
+  if (ex.busy) return;
+  const last = ex.turns[ex.turns.length - 1]; if (last && !last.a && ex.ans.trim()) last.a = ex.ans.trim();
+  if (ex.turns.length) await exSave();
+  exReset(); exRender();
+}
+
+// Dictée : on réutilise l'enregistrement et la transcription locale déjà présents dans Bullo (save_audio + transcribe).
+async function exDictate(target) {
+  if (ex.mr) { ex.mr.stop(); return; }
+  if (ex.busy || ex.dictating) return;
+  if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") { ex.dictMsg = "L’enregistrement n’est pas disponible dans cette fenêtre."; return exRender(); }
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mime = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find(m => MediaRecorder.isTypeSupported(m)) || "";
+    const mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream), chunks = [], type = mr.mimeType || mime || "audio/webm";
+    mr.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    mr.onerror = () => { stream.getTracks().forEach(t => t.stop()); ex.mr = null; bgOnRecord(false); ex.dictMsg = "L’enregistrement a rencontré une erreur."; exRender(); };
+    mr.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop()); ex.mr = null; bgOnRecord(false);
+      if (!chunks.length) { ex.dictMsg = "Aucun son n’a été enregistré."; return exRender(); }
+      ex.dictating = target; ex.dictMsg = "Transcription en cours…"; exRender();
+      try {
+        const bytes = new Uint8Array(await new Blob(chunks, { type }).arrayBuffer());
+        const path = await invoke("save_audio", bytes, { headers: { "x-ext": type.includes("mp4") ? "m4a" : "webm" } });
+        const txt = (await invoke("transcribe", { path })).trim();
+        if (!txt) ex.dictMsg = "Je n’ai rien entendu. Réessaie, un peu plus près du micro.";
+        else { const k = target === "ans" ? "ans" : "text"; ex[k] = (ex[k] ? ex[k].trimEnd() + " " : "") + txt; ex.dictMsg = "Transcription ajoutée : relis-la et corrige-la si besoin."; }
+      } catch (er) { ex.dictMsg = errText(er); }
+      ex.dictating = ""; exRender();
+    };
+    bgOnRecord(true); mr.start(); ex.mr = mr; ex.dictMsg = "Enregistrement en cours… clique à nouveau pour terminer."; exRender();
+  } catch (er) {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    ex.dictMsg = stream ? "L’enregistrement n’a pas pu démarrer : " + errText(er) : "Micro inaccessible. Autorise-le dans Réglages Système > Confidentialité > Micro."; exRender();
+  }
+}
+
+const exDictBtn = target => `<button class="ghost" data-dict="${target}" aria-pressed="${!!ex.mr}" ${ex.busy || ex.dictating ? "disabled" : ""}>${ex.mr ? "⏹ Terminer l’enregistrement" : "🎙 Dicter à l’oral"}</button>`;
+const exList = (title, a) => a && a.length ? `<h3>${title}</h3><ul>${a.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
+const exBilanHtml = b => `<div class="card ex-bilan"><h2 style="margin-top:0">Ton bilan</h2>${exList("✅ Solide", b.solide)}${exList("🔎 À revoir", b.revoir)}<div class="row"><button class="ghost" id="exSpeakBilan">🔊 Écouter le bilan</button></div></div>`;
+const exBilanOf = s => { try { return s ? JSON.parse(s) : null; } catch { return null; } };
+const exTurnsOf = s => { try { const a = JSON.parse(s); return Array.isArray(a) ? a : []; } catch { return []; } };
+
+async function explainView() {
+  const err = ex.err ? `<p class="msg err" role="alert">${esc(ex.err)}</p>` : "", busy = ex.busy ? `<p class="msg ex-busy" role="status"><span class="spin" aria-hidden="true"></span>${esc(ex.busy)}</p>` : "";
+  const dm = ex.dictMsg ? `<p class="msg" role="status">${esc(ex.dictMsg)}</p>` : "";
+  const tabs = `<div class="row ex-tabs" role="tablist"><button class="chip ${ex.page === "history" ? "" : "on"}" data-pg="start" aria-pressed="${ex.page !== "history"}">Expliquer</button><button class="chip ${ex.page === "history" ? "on" : ""}" data-pg="history" aria-pressed="${ex.page === "history"}">Mes explications</button></div>`;
+  let body = "";
+  if (ex.page === "history") {
+    try { ex.list = await invoke("explain_list"); } catch (er) { ex.list = []; ex.err = errText(er); }
+    if (view !== "explain") return;
+    body = `<p class="mute lead">Tes séances passées. Elles restent sur cet ordinateur.</p>` + (ex.list.length ? ex.list.map(s => {
+      const open = ex.open === s.id, turns = exTurnsOf(s.turns), b = exBilanOf(s.bilan);
+      return `<div class="card ex-item"><div class="row" style="align-items:center"><button class="ghost ex-head" data-open="${s.id}" aria-expanded="${open}"><b>${esc(s.topic || "Sans sujet")}</b><small class="mute">${esc(when(s.created))} · ${turns.length} série${turns.length > 1 ? "s" : ""} de questions${b ? " · bilan fait" : ""}</small></button>
+        ${ex.confirm === s.id ? `<button class="ghost danger" data-delyes="${s.id}">Confirmer la suppression</button><button class="ghost" data-delno>Annuler</button>` : `<button class="ghost danger" data-del="${s.id}" aria-label="Supprimer la séance ${esc(s.topic)}">${ico("trash")}<span>Supprimer</span></button>`}</div>
+        ${open ? `<div class="ex-detail"><h3>Mon explication</h3><p>${esc(s.explanation)}</p>${turns.map((t, i) => `<h3>Question ${i + 1}</h3><p>${esc(t.q)}</p>${t.a ? `<h3>Ma réponse</h3><p>${esc(t.a)}</p>` : ""}`).join("")}${b ? `<h3>Bilan</h3>${exList("✅ Solide", b.solide)}${exList("🔎 À revoir", b.revoir)}` : `<p class="mute">Séance arrêtée avant le bilan.</p>`}</div>` : ""}</div>`;
+    }).join("") : `<p class="mute">Aucune explication pour l’instant. Lance ta première avec « Expliquer ».</p>`);
+  } else if (ex.page === "start") {
+    body = `<p class="mute lead">Explique avec tes mots ce que tu viens d’apprendre. Un élève curieux te posera des questions sur ce qui n’est pas clair. Il ne donne jamais la réponse : c’est toi qui cherches.</p>
+      <div class="card ex-card"><label for="exTopic">Le sujet</label><input id="exTopic" maxlength="120" placeholder="Ex. : la photosynthèse" value="${esc(ex.topic)}" ${ex.busy ? "disabled" : ""}>
+      <label for="exText">Ton explication</label><textarea id="exText" rows="8" placeholder="Écris ici comme si tu l’expliquais à quelqu’un qui découvre le sujet…" ${ex.busy ? "disabled" : ""}>${esc(ex.text)}</textarea>
+      <div class="row">${exDictBtn("text")}</div>${dm}${err}${busy}
+      <div class="row"><button class="primary" id="exGo" ${ex.busy || ex.mr ? "disabled" : ""}>Commencer</button></div></div>`;
+  } else if (ex.page === "talk") {
+    const i = ex.turns.length, cur = ex.turns[i - 1];
+    body = `<p class="mute lead">Série ${i} sur ${EX_MAX_ROUNDS} · tu peux t’arrêter quand tu veux.</p>
+      <details class="card ex-card"><summary>Voir mon explication (${esc(ex.topic)})</summary><p>${esc(ex.text)}</p></details>
+      ${ex.turns.slice(0, -1).map((t, k) => `<div class="card ex-past"><h3>Série ${k + 1}</h3><p class="ex-q">${esc(t.q)}</p><p class="mute"><b>Ma réponse :</b> ${esc(t.a)}</p></div>`).join("")}
+      <div class="card ex-card" aria-live="polite"><h2 style="margin-top:0">L’élève demande</h2><p class="ex-q" id="exQ">${esc(cur.q)}</p><div class="row"><button class="ghost" id="exSpeak">🔊 Écouter les questions</button></div>
+      <label for="exAns">Ta réponse</label><textarea id="exAns" rows="5" placeholder="Réponds avec tes mots…" ${ex.busy ? "disabled" : ""}>${esc(ex.ans)}</textarea>
+      <div class="row">${exDictBtn("ans")}</div>${dm}${err}${busy}
+      <div class="row"><button class="primary" id="exSend" ${ex.busy || ex.mr ? "disabled" : ""}>${i >= EX_MAX_ROUNDS ? "Répondre et voir le bilan" : "Répondre"}</button><button class="ghost" id="exBilan" ${ex.busy || ex.mr ? "disabled" : ""}>Voir mon bilan</button><button class="ghost" id="exStop" ${ex.busy ? "disabled" : ""}>Arrêter</button></div></div>`;
+  } else {
+    body = `${exBilanHtml(ex.bilan || { solide: [], revoir: [] })}<div class="row"><button class="primary" id="exNew">Nouvelle explication</button><button class="ghost" data-pg="history">Mes explications</button></div>`;
+  }
+  main.innerHTML = `<h1>Explique-moi</h1>${ex.page === "bilan" ? "" : tabs}${body}`;
+  main.querySelectorAll("[data-pg]").forEach(b => b.onclick = () => { if (ex.busy || ex.mr) return; if (b.dataset.pg === "history") ex.page = "history"; else if (ex.page === "history") ex.page = ex.turns.length && !ex.bilan ? "talk" : (ex.bilan ? "bilan" : "start"); ex.err = ""; explainView(); });
+  const keep = (id, k) => { const el = $(id); if (el) el.oninput = () => { ex[k] = el.value; }; };
+  keep("#exTopic", "topic"); keep("#exText", "text"); keep("#exAns", "ans");
+  main.querySelectorAll("[data-dict]").forEach(b => b.onclick = () => exDictate(b.dataset.dict));
+  const on = (id, f) => { const el = $(id); if (el) el.onclick = f; };
+  on("#exGo", exStart); on("#exSend", exAnswer); on("#exBilan", exFinish); on("#exStop", exStop);
+  on("#exNew", () => { exReset(); explainView(); });
+  on("#exSpeak", () => readAloud(ex.turns[ex.turns.length - 1].q));
+  on("#exSpeakBilan", () => readAloud([...(ex.bilan.solide || []).map(x => "Solide : " + x), ...(ex.bilan.revoir || []).map(x => "À revoir : " + x)].join(". ")));
+  main.querySelectorAll("[data-open]").forEach(b => b.onclick = () => { ex.open = ex.open === +b.dataset.open ? null : +b.dataset.open; explainView(); });
+  main.querySelectorAll("[data-del]").forEach(b => b.onclick = () => { ex.confirm = +b.dataset.del; explainView(); });
+  main.querySelectorAll("[data-delno]").forEach(b => b.onclick = () => { ex.confirm = null; explainView(); });
+  main.querySelectorAll("[data-delyes]").forEach(b => b.onclick = async () => { try { await invoke("explain_delete", { id: +b.dataset.delyes }); notice("Séance supprimée."); } catch (er) { notice(errText(er), true); } ex.confirm = null; if (ex.id === +b.dataset.delyes) exReset(), ex.page = "history"; explainView(); });
+}
+
+// Proposition discrète en fin de session de travail (Pomodoro) : un bouton, rien ne s'ouvre tout seul.
+function exBanner() {
+  if ($("#exBanner")) return;
+  const d = document.createElement("div"); d.id = "exBanner"; d.className = "upd-banner"; d.setAttribute("role", "status");
+  d.innerHTML = `<span>Session terminée. Envie de vérifier ce que tu as retenu ?</span><button class="primary sm" id="exBannerGo">Explique-moi</button><button class="ghost sm" id="exBannerNo">Plus tard</button>`;
+  bannerHost().appendChild(d);
+  const close = () => d.remove();
+  $("#exBannerGo").onclick = () => { close(); exOpen(); };
+  $("#exBannerNo").onclick = close; setTimeout(close, 90000);
 }
 
 // Rechercher : mot libre + boutons par cours. Un cours choisi sans mot = tout son contenu.

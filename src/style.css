@@ -200,5 +200,16 @@ body.single-task-active nav{display:none} body.single-task-active #main{max-widt
 .hc a{text-decoration:underline}
 
 /* Mises à jour et état des outils */
-.upd-banner{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bar-h,72px) + 24px);z-index:40;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:calc(100% - 32px);padding:10px 14px;border-radius:99px;background:var(--panel);color:var(--ink);border:1px solid var(--line);box-shadow:var(--sh,0 8px 30px rgba(0,0,0,.18))}
+#banners{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bar-h,0px) + 88px);z-index:40;display:flex;flex-direction:column;align-items:center;gap:8px;max-width:calc(100% - 32px);pointer-events:none}#banners>*{pointer-events:auto}
+.upd-banner{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:calc(100% - 32px);padding:10px 14px;border-radius:99px;background:var(--panel);color:var(--ink);border:1px solid var(--line);box-shadow:var(--sh,0 8px 30px rgba(0,0,0,.18))}
 .item.dep{flex-wrap:wrap;gap:8px 12px}.dep-hint{flex-basis:100%}
+
+/* Explique-moi */
+.ex-card label{display:block;font-weight:700;margin:14px 0 6px}.ex-card textarea,.ex-card input{width:100%}
+.ex-tabs{margin-bottom:6px}.ex-q{font-size:1.12em;line-height:1.6;white-space:pre-wrap}
+.ex-past{opacity:.85}.ex-bilan ul{padding-left:1.2em}.ex-bilan li{margin:.3em 0}
+.ex-item .ex-head{display:flex;flex-direction:column;align-items:flex-start;text-align:left;flex:1;border:0;background:transparent;padding:6px 4px}
+.ex-detail{margin-top:10px;border-top:1px solid var(--line);padding-top:6px}.ex-detail h3{margin:.9em 0 .2em;font-size:1em}.ex-detail p{margin:.2em 0;white-space:pre-wrap}
+.ex-busy{display:flex;align-items:center;gap:10px}.spin{width:16px;height:16px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);animation:exspin 1s linear infinite;flex:none}
+@keyframes exspin{to{transform:rotate(360deg)}}
+.reduce-motion .spin{animation:none}@media (prefers-reduced-motion:reduce){.spin{animation:none}}

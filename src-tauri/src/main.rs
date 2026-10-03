@@ -177,6 +177,69 @@ async fn summarize(text: String) -> Result<serde_json::Value, String> {
     }).await.map_err(e)?
 }
 
+
+// ===== « Explique-moi » (méthode Feynman) : l'utilisateur explique, le modèle local pose des questions sans jamais donner la réponse =====
+// Le texte ci-dessous est facile à modifier : c'est la consigne envoyée au modèle.
+const EXPLAIN_PROMPT: &str = "Tu es un élève curieux de 12 ans. Quelqu'un t'explique un sujet qu'il vient d'étudier. Ton rôle est de trouver ce qui manque ou n'est pas clair dans son explication. Pose au maximum 3 questions courtes et simples, en français. Ne donne JAMAIS la réponse, ne corrige pas directement, ne fais pas de cours. Si l'explication est solide, dis-le simplement et pose une question pour aller un peu plus loin. Ton ton est bienveillant et encourageant.";
+const EXPLAIN_BILAN_PROMPT: &str = "Tu es un élève curieux de 12 ans. Quelqu'un vient de t'expliquer un sujet et de répondre à tes questions. Fais un bilan très court, en français, en deux parties exactement. Première partie, qui commence par « Solide : » : 1 à 3 puces (« - ») sur ce qui a été bien expliqué. Deuxième partie, qui commence par « À revoir : » : 1 à 3 puces (« - ») qui nomment des SUJETS à retravailler. Ne donne JAMAIS la réponse ni la correction, ne fais pas de cours : nomme seulement les sujets (par exemple « le rôle de la lumière »). Ton bienveillant et encourageant.";
+
+#[derive(Serialize, Deserialize)]
+struct ChatMsg { role: String, content: String }
+
+// Même Ollama local que le résumé et les outils (même adresse, même modèle). Ne bloque jamais l'interface : thread dédié.
+#[tauri::command]
+async fn explain_turn(topic: String, messages: Vec<ChatMsg>, bilan: bool) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        if messages.is_empty() || messages.len() > 12 { return Err("Conversation invalide.".into()); }
+        let model = ollama_model();
+        let topic: String = topic.chars().take(200).collect();
+        let sys = if bilan { EXPLAIN_BILAN_PROMPT.to_string() } else { format!("{EXPLAIN_PROMPT}\n\nSujet étudié : {topic}") };
+        let mut msgs = vec![serde_json::json!({ "role": "system", "content": sys })];
+        for m in &messages {
+            let role = if m.role == "assistant" { "assistant" } else { "user" };
+            let content: String = m.content.chars().take(8000).collect();
+            msgs.push(serde_json::json!({ "role": role, "content": content }));
+        }
+        if bilan { msgs.push(serde_json::json!({ "role": "user", "content": format!("Sujet : {topic}\nFais le bilan maintenant.") })); }
+        let agent = ureq::AgentBuilder::new().timeout(std::time::Duration::from_secs(300)).build();
+        let r: serde_json::Value = agent.post("http://localhost:11434/api/chat")
+            .send_json(serde_json::json!({ "model": model, "messages": msgs, "stream": false, "keep_alive": "30s" }))
+            .map_err(|er| ollama_err(&model, er))?
+            .into_json().map_err(e)?;
+        let out = r["message"]["content"].as_str().unwrap_or("").trim().to_string();
+        if out.is_empty() { return Err("Le modèle n'a rien répondu. Réessaie.".into()); }
+        Ok(out)
+    }).await.map_err(e)?
+}
+
+#[derive(Serialize)]
+struct Explanation { id: i64, created: String, topic: String, explanation: String, turns: String, bilan: String }
+
+// Crée la séance (id absent) ou la met à jour. `turns` et `bilan` sont du JSON gardé tel quel.
+#[tauri::command]
+async fn explain_save(db: State<'_, Db>, id: Option<i64>, topic: String, explanation: String, turns: String, bilan: String) -> Result<i64, String> {
+    let c = db.0.lock().map_err(e)?;
+    match id {
+        Some(i) => { c.execute("UPDATE explanations SET topic=?2, explanation=?3, turns=?4, bilan=?5 WHERE id=?1", params![i, topic, explanation, turns, bilan]).map_err(e)?; Ok(i) }
+        None => { c.execute("INSERT INTO explanations(topic,explanation,turns,bilan) VALUES(?1,?2,?3,?4)", params![topic, explanation, turns, bilan]).map_err(e)?; Ok(c.last_insert_rowid()) }
+    }
+}
+
+#[tauri::command]
+async fn explain_list(db: State<'_, Db>) -> Result<Vec<Explanation>, String> {
+    let c = db.0.lock().map_err(e)?;
+    let mut s = c.prepare("SELECT id,created,topic,explanation,turns,bilan FROM explanations ORDER BY id DESC").map_err(e)?;
+    let rows = s.query_map([], |r| Ok(Explanation { id: r.get(0)?, created: r.get(1)?, topic: r.get(2)?, explanation: r.get(3)?, turns: r.get(4)?, bilan: r.get(5)? })).map_err(e)?;
+    let out = rows.collect::<Result<Vec<_>, _>>().map_err(e)?;
+    Ok(out)
+}
+
+#[tauri::command]
+async fn explain_delete(db: State<'_, Db>, id: i64) -> Result<(), String> {
+    db.0.lock().map_err(e)?.execute("DELETE FROM explanations WHERE id=?1", params![id]).map_err(e)?;
+    Ok(())
+}
+
 // Outils IA courts (corriger, simplifier, décomposer, débloquer) via Ollama local.
 #[tauri::command]
 async fn assist(mode: String, text: String) -> Result<String, String> {
@@ -1210,11 +1273,16 @@ fn main() {
                 "CREATE TABLE IF NOT EXISTS reminders(
                    id INTEGER PRIMARY KEY, title TEXT NOT NULL, due INTEGER NOT NULL,
                    done INTEGER NOT NULL DEFAULT 0, notified INTEGER NOT NULL DEFAULT 0);")?;
+            conn.execute_batch(
+                "CREATE TABLE IF NOT EXISTS explanations(
+                   id INTEGER PRIMARY KEY, created TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                   topic TEXT NOT NULL DEFAULT '', explanation TEXT NOT NULL DEFAULT '',
+                   turns TEXT NOT NULL DEFAULT '[]', bilan TEXT NOT NULL DEFAULT '');")?;
             app.manage(Db(Mutex::new(conn)));
             start_reminder_watcher(app.handle().clone());
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![player_diagnostic, media_key_test, now_playing, open_web, system_audio, system_mute, system_volume, add_item, add_course, read_audio, save_download, google_status, google_save_keys, google_clear_keys, google_connect, google_cancel, google_disconnect, google_backup, google_restore, open_url, install_fonts, list_fonts, read_font, notify, media_status, media_control, media_volume, media_open, add_reminder, list_reminders, update_reminder, delete_reminder, list_items, search, set_done, delete_item, save_audio, transcribe, summarize, assist, export_md, pick, open_path, set_audio_dir, get_audio_dir, check_installation, check_update, install_dependency, import_text, save_course, export_backup, import_backup])
+        .invoke_handler(tauri::generate_handler![player_diagnostic, media_key_test, now_playing, open_web, system_audio, system_mute, system_volume, add_item, add_course, read_audio, save_download, google_status, google_save_keys, google_clear_keys, google_connect, google_cancel, google_disconnect, google_backup, google_restore, open_url, install_fonts, list_fonts, read_font, notify, media_status, media_control, media_volume, media_open, add_reminder, list_reminders, update_reminder, delete_reminder, list_items, search, set_done, delete_item, save_audio, transcribe, summarize, assist, explain_turn, explain_save, explain_list, explain_delete, export_md, pick, open_path, set_audio_dir, get_audio_dir, check_installation, check_update, install_dependency, import_text, save_course, export_backup, import_backup])
         .run(tauri::generate_context!())
         .expect("erreur au lancement de Bullo");
 }

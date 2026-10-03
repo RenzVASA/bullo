@@ -107,7 +107,7 @@ Sans ce fichier, Bullo utilise son logo vectoriel `src/bullo-logo.svg` (pas de �
 - `FOCUSFLOW_*` (variables) et `~/.focusflow/` ne sont lus qu'en repli, pour ne pas casser une ancienne installation. Les anciens réglages de l'interface (`ff_*`) sont migrés automatiquement vers `bullo_*`.
 
 ### Structure
-- `src/index.html` : interface (Accueil, Capturer, Inbox, Rappels, Rechercher, Outils, Réglages, barre Fond sonore)
+- `src/index.html` : interface (Accueil, Capturer, Inbox, Rappels, Rechercher, Outils, Explique-moi, Bien-être, Réglages, barre Fond sonore)
 - `src/style.css` : styles, thèmes, contraste élevé · `src/fonts/` : polices embarquées
 - `src-tauri/src/main.rs` : SQLite, audio, transcription, résumé, rappels et notifications, exports
 - `scripts/` : `check-frontend.js` (`npm run build`), `generate-logo-variants.js`
@@ -136,6 +136,9 @@ Par défaut (réglable dans Réglages > Fond sonore), Bullo **met en sourdine to
 
 ### Bien-être
 Onglet **Bien-être** : parking de pensées (Ctrl+Maj+P depuis n'importe où : tu notes l'idée parasite, tu la tries plus tard, ou tu en fais une tâche), respiration guidée (carrée, 4-7-8, cohérence 5-5, sans animation si « réduire les animations » est activé) et pauses douces (rappel d'eau, d'étirement, de regarder au loin).
+
+### Explique-moi (méthode Feynman)
+Onglet **Explique-moi** : tu indiques un sujet et tu l'expliques avec tes mots, à l'écrit ou à l'oral (la dictée utilise la transcription locale de Bullo). Un « élève curieux de 12 ans », porté par Ollama en local, te pose 1 à 3 questions sur ce qui manque, **sans jamais donner la réponse**. L'échange dure 3 séries au maximum, puis Bullo fait un bilan très court : ce qui est solide, et les sujets à revoir. Tu peux t'arrêter à tout moment. Rien ne démarre tout seul. Les séances sont gardées dans « Mes explications » (sur ton ordinateur uniquement). Il faut qu'Ollama soit ouvert et que le modèle de résumé soit téléchargé (Réglages > Vérifier les outils). Le texte de la consigne donnée au modèle est la constante `EXPLAIN_PROMPT` en haut de la section « Explique-moi » de `src-tauri/src/main.rs`. Un petit modèle local peut parfois laisser échapper une réponse malgré la consigne.
 
 ### Synchronisation Google Drive
 Réglages > Google Drive > « Démarrer le tutoriel » : 6 étapes dans l'appli (projet Google Cloud, API Drive, écran de consentement avec ton Gmail en utilisateur test et le scope `drive.file`, ID client « Application de bureau », envoi des clés, connexion). Ce qu'il te faut est un **ID client OAuth** + son code secret (pas une simple « clé API »).
