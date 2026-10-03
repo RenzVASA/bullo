@@ -109,6 +109,12 @@ Avec **Ollama fermé** :
 - [ ] « Commencer » affiche « Cette fonctionnalité a besoin d'Ollama. Ouvre l'application Ollama, puis réessaie. », rien ne plante, ton texte est conservé.
 - [ ] Après avoir ouvert Ollama, « Commencer » fonctionne sans retaper.
 
+## 5 duodecies — Mise à jour en un clic (v1.3.3)
+- [ ] Bullo installé dans Applications en 1.3.3, puis une version plus récente publiée : le bandeau affiche « Installer et redémarrer ».
+- [ ] Clic : message de téléchargement, Bullo se ferme, puis se rouvre seul avec le nouveau numéro dans Réglages › À propos. Notes et réglages intacts.
+- [ ] Sans internet : message d'erreur clair, bouton « Ouvrir la page de téléchargement », l'application reste ouverte.
+- [ ] Lancé avec `npm run tauri dev` : message « ne marche que dans l'application installée » (normal).
+
 ## 5 undecies — Longs textes et notes (v1.3.2)
 - [ ] Inbox : écrire une très longue note (plus de 300 caractères) : « Lire la suite » affiche tout, « Réduire » replie, « 🔊 Écouter » lit jusqu'à la dernière phrase.
 - [ ] Outils : coller un long texte, « Enregistrer comme note », puis vérifier dans l'Inbox qu'on peut tout lire et tout écouter.

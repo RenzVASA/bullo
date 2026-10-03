@@ -42,7 +42,7 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "
 const errText = x => (x && x.message) ? x.message : String(x);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const main = $("#main");
-const APP_VERSION = "1.3.2", ABOUT_CREDIT = "Vibe codé par Renz-VASA, avec un peu d’intelligence artificielle ✨";
+const APP_VERSION = "1.3.3", ABOUT_CREDIT = "Vibe codé par Renz-VASA, avec un peu d’intelligence artificielle ✨";
 
 // Clés de stockage locales (préfixe bullo_). Les anciennes clés de la version précédente sont migrées une seule fois, puis supprimées.
 const KEYS = { cfg: "bullo_cfg", tags: "bullo_tags", vers: "bullo_note_versions", draft: "bullo_draft", focus: "bullo_focus", pom: "bullo_pom_enabled", googleWhen: "bullo_google_when" };
@@ -1007,18 +1007,33 @@ async function checkUpdate(manual) {
 function showUpdate(u, manual) {
   const out = $("#updMsg");
   if (u.newer) {
-    const html = `<b>Nouvelle version ${esc(u.latest)} disponible</b> (tu as la ${esc(u.current)}). <button class="primary sm" id="updGo">Voir la mise à jour</button>`;
-    if (out) { out.className = "msg"; out.innerHTML = html; $("#updGo").onclick = () => invoke("open_web", { url: u.url }).catch(er => notice(errText(er), true)); }
+    const html = `<b>Nouvelle version ${esc(u.latest)} disponible</b> (tu as la ${esc(u.current)}). <button class="primary sm" id="updGo">Installer et redémarrer</button> <button class="ghost sm" id="updWeb">Voir les détails</button><small class="mute" style="display:block;margin-top:6px">Bullo se ferme puis se rouvre tout seul. Tes notes et tes réglages ne bougent pas.</small>`;
+    if (out) { out.className = "msg"; out.innerHTML = html; $("#updGo").onclick = () => installUpdate(u, $("#updGo"), out); $("#updWeb").onclick = () => invoke("open_web", { url: u.url }).catch(er => notice(errText(er), true)); }
     if (!manual) updBanner(u);
   } else if (out) { out.className = "msg"; out.textContent = `✅ Bullo est à jour (version ${u.current}).`; }
+}
+// Télécharge la nouvelle version, vérifie son empreinte, puis Bullo se ferme et se rouvre mis à jour. Au moindre souci : message précis + lien manuel.
+let updBusy = false;
+async function installUpdate(u, btn, out) {
+  if (updBusy) return; updBusy = true;
+  const old = btn ? btn.textContent : "";
+  if (btn) { btn.disabled = true; btn.textContent = "Téléchargement…"; }
+  const say = (t, err) => { if (out) { out.className = err ? "msg err" : "msg"; out.textContent = t; } else notice(t, !!err, 9000); };
+  say("Téléchargement de la mise à jour… Bullo va se fermer puis se rouvrir tout seul.");
+  try { await invoke("install_update"); }
+  catch (er) {
+    updBusy = false; if (btn) { btn.disabled = false; btn.textContent = old; }
+    say(errText(er) + " Tu peux aussi télécharger la version à la main.", true);
+    if (out) { const b = document.createElement("button"); b.className = "ghost sm"; b.textContent = "Ouvrir la page de téléchargement"; b.onclick = () => invoke("open_web", { url: u.url }).catch(x => notice(errText(x), true)); out.append(" ", b); }
+  }
 }
 const bannerHost = () => $("#banners") || document.body.appendChild(Object.assign(document.createElement("div"), { id: "banners" }));
 function updBanner(u) {
   if ($("#updBanner")) return;
   const d = document.createElement("div"); d.id = "updBanner"; d.className = "upd-banner"; d.setAttribute("role", "status");
-  d.innerHTML = `<span>Bullo ${esc(u.latest)} est disponible.</span><button class="primary sm" id="updBannerGo">Voir</button><button class="ghost sm" id="updBannerNo" aria-label="Plus tard">Plus tard</button>`;
+  d.innerHTML = `<span>Bullo ${esc(u.latest)} est disponible.</span><button class="primary sm" id="updBannerGo">Installer et redémarrer</button><button class="ghost sm" id="updBannerNo" aria-label="Plus tard">Plus tard</button>`;
   bannerHost().appendChild(d);
-  $("#updBannerGo").onclick = () => { invoke("open_web", { url: u.url }).catch(er => notice(errText(er), true)); d.remove(); };
+  $("#updBannerGo").onclick = () => { d.remove(); installUpdate(u, null, null); };
   $("#updBannerNo").onclick = () => d.remove();
 }
 // Au démarrage : au plus une vérification par jour, silencieuse (sans internet, rien ne s'affiche).

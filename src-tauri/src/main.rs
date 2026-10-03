@@ -1198,6 +1198,62 @@ async fn check_update(current: String) -> Result<UpdateInfo, String> {
     }).await.map_err(e)?
 }
 
+// ---- Mise à jour automatique : télécharge le .dmg de la dernière version, vérifie son empreinte SHA-256 (publiée dans la Release),
+// puis un petit script remplace Bullo.app une fois Bullo fermé, retire la quarantaine et rouvre l'application.
+// En cas de souci, l'ancienne version est remise en place et le .dmg est ouvert pour une installation à la main. ----
+const UPDATE_SCRIPT: &str = r#"#!/bin/sh
+PID="$1"; DMG="$2"; APP="$3"; DIR="$(dirname "$DMG")"
+i=0; while kill -0 "$PID" 2>/dev/null && [ $i -lt 60 ]; do sleep 0.5; i=$((i+1)); done
+MNT="$(mktemp -d /tmp/bullo-maj.XXXXXX)"
+if ! hdiutil attach -nobrowse -readonly -mountpoint "$MNT" "$DMG" >/dev/null 2>&1; then open "$DMG"; open "$APP"; exit 1; fi
+SRC="$(ls -d "$MNT"/*.app 2>/dev/null | head -1)"
+OK=0
+if [ -n "$SRC" ] && mv "$APP" "$APP.old" 2>/dev/null; then
+  if ditto "$SRC" "$APP" 2>/dev/null && xattr -cr "$APP" 2>/dev/null; then OK=1; rm -rf "$APP.old"; else rm -rf "$APP"; mv "$APP.old" "$APP"; fi
+fi
+hdiutil detach "$MNT" -quiet >/dev/null 2>&1
+if [ "$OK" = 1 ]; then rm -f "$DMG"; else open "$DMG"; fi
+open "$APP"
+"#;
+
+#[tauri::command]
+async fn install_update(app: AppHandle) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
+        use std::os::unix::process::CommandExt;
+        let exe = std::env::current_exe().map_err(e)?;
+        let app_path = exe.ancestors().find(|p| p.extension().map(|x| x == "app").unwrap_or(false)).map(|p| p.to_path_buf())
+            .ok_or_else(|| "La mise à jour automatique ne marche que dans l'application installée (pas en mode développement).".to_string())?;
+        let r: serde_json::Value = ureq::AgentBuilder::new().timeout(std::time::Duration::from_secs(10)).build()
+            .get("https://api.github.com/repos/RenzVASA/bullo/releases/latest")
+            .set("User-Agent", "Bullo-update").set("Accept", "application/vnd.github+json").call()
+            .map_err(|_| "Impossible de joindre GitHub (pas d'internet ?).".to_string())?
+            .into_json().map_err(e)?;
+        let prefix = "https://github.com/RenzVASA/bullo/releases/download/";
+        let url = r["assets"].as_array().and_then(|a| a.iter().filter_map(|x| x["browser_download_url"].as_str())
+            .find(|u| u.starts_with(prefix) && u.ends_with(".dmg"))).ok_or("Cette version ne contient pas de fichier .dmg à installer.")?.to_string();
+        let body = r["body"].as_str().unwrap_or("");
+        let want: String = body.split("SHA-256 du .dmg : `").nth(1).map(|t| t.chars().take_while(|c| c.is_ascii_hexdigit()).collect()).unwrap_or_default();
+        if want.len() != 64 { return Err("L'empreinte de sécurité (SHA-256) de cette version est introuvable : par prudence, rien n'a été installé. Utilise « Voir la mise à jour » pour la télécharger à la main.".into()); }
+        let home = std::env::var("HOME").map_err(e)?;
+        let dir = format!("{home}/.bullo/update");
+        let dmg = format!("{dir}/Bullo.dmg");
+        download_to(&url, &dmg)?;
+        let mut h = Sha256::new();
+        h.update(fs::read(&dmg).map_err(e)?);
+        let got = format!("{:x}", h.finalize());
+        if got != want { let _ = fs::remove_file(&dmg); return Err("Le fichier téléchargé ne correspond pas à l'empreinte publiée : il a été supprimé et rien n'a été installé.".into()); }
+        let script = format!("{dir}/apply.sh");
+        fs::write(&script, UPDATE_SCRIPT).map_err(e)?;
+        Command::new("sh").arg(&script).arg(std::process::id().to_string()).arg(&dmg).arg(&app_path)
+            .stdin(std::process::Stdio::null()).stdout(std::process::Stdio::null()).stderr(std::process::Stdio::null())
+            .process_group(0).spawn().map_err(|_| "Impossible de lancer l'installation.".to_string())?;
+        Ok(())
+    }).await.map_err(e)??;
+    // Le script attend que Bullo soit fermé, remplace l'application puis la rouvre.
+    app.exit(0);
+    Ok(())
+}
+
 #[tauri::command]
 fn check_installation() -> Result<Vec<DependencyStatus>, String> {
     let has = |cmd: &str| Command::new("sh").env("PATH", PATH_ENV).args(["-c", &format!("command -v {cmd}")]).output().map(|x| x.status.success()).unwrap_or(false);
@@ -1344,7 +1400,7 @@ fn main() {
             start_reminder_watcher(app.handle().clone());
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![player_diagnostic, media_key_test, now_playing, open_web, system_audio, system_mute, system_volume, add_item, add_course, read_audio, save_download, google_status, google_save_keys, google_clear_keys, google_connect, google_cancel, google_disconnect, google_backup, google_restore, open_url, install_fonts, list_fonts, read_font, notify, media_status, media_control, media_volume, media_open, add_reminder, list_reminders, update_reminder, delete_reminder, list_items, search, set_done, delete_item, save_audio, transcribe, summarize, assist, explain_turn, explain_save, explain_list, explain_delete, export_md, pick, open_path, set_audio_dir, get_audio_dir, check_installation, check_update, install_dependency, import_text, save_course, export_backup, import_backup])
+        .invoke_handler(tauri::generate_handler![player_diagnostic, media_key_test, now_playing, open_web, system_audio, system_mute, system_volume, add_item, add_course, read_audio, save_download, google_status, google_save_keys, google_clear_keys, google_connect, google_cancel, google_disconnect, google_backup, google_restore, open_url, install_fonts, list_fonts, read_font, notify, media_status, media_control, media_volume, media_open, add_reminder, list_reminders, update_reminder, delete_reminder, list_items, search, set_done, delete_item, save_audio, transcribe, summarize, assist, explain_turn, explain_save, explain_list, explain_delete, export_md, pick, open_path, set_audio_dir, get_audio_dir, check_installation, check_update, install_update, install_dependency, import_text, save_course, export_backup, import_backup])
         .run(tauri::generate_context!())
         .expect("erreur au lancement de Bullo");
 }

@@ -2,6 +2,15 @@
 
 Format : une section par version, la plus récente en haut.
 
+## 1.3.3 — 2026-10-04
+
+### Nouveautés
+- **Mise à jour en un clic** : le bandeau et le bouton des Réglages proposent maintenant « Installer et redémarrer ». Bullo télécharge la nouvelle version, vérifie son empreinte de sécurité (SHA-256, publiée avec la version), se ferme, remplace l'application, retire le blocage de macOS et se rouvre tout seul. Les notes et les réglages ne sont pas touchés. « Voir les détails » ouvre la page de la version.
+- Si quelque chose ne va pas (pas d'internet, empreinte différente, droits insuffisants), rien n'est installé à moitié : l'ancienne version reste en place, un message clair s'affiche et le téléchargement manuel reste proposé.
+
+### À savoir
+- La mise à jour automatique n'existe qu'à partir de cette version : pour passer d'une version plus ancienne à la 1.3.3, il faut encore installer à la main une dernière fois.
+
 ## 1.3.2 — 2026-10-04
 
 ### Corrections
