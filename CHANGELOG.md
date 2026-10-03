@@ -2,6 +2,40 @@
 
 Format : une section par version, la plus récente en haut.
 
+## 1.3.2 — 2026-10-04
+
+### Corrections
+- **Résumé IA incomplet sur les longs textes** : Ollama lit par défaut très peu de texte d'un coup et coupe le reste sans prévenir. Bullo demande maintenant une fenêtre de lecture adaptée à la taille du texte, et au-delà d'environ 40 000 caractères le texte est découpé en parties résumées une par une puis fusionnées, au lieu de perdre la fin. Le résumé est aussi invité à couvrir tout le texte, du début à la fin.
+- **Outils** : un texte trop long pour un outil affiche un message clair au lieu d'être coupé en silence.
+- **Inbox** : les notes longues étaient coupées à 160 caractères sans moyen de lire la suite. Il y a maintenant « Lire la suite » / « Réduire » et un bouton **🔊 Écouter** qui lit la note en entier.
+- **Inbox** : une phrase longue écrite sur une seule ligne n'était gardée que sur ses 120 premiers caractères. Elle est maintenant conservée en entier.
+
+## 1.3.1 — 2026-10-04
+
+### Amélioration
+- **Salutation selon l'heure** sur l'Accueil et l'écran de verrouillage : « Bonjour » le jour, « Bonsoir » à partir de 18 h, avec un petit mot (Bonne matinée, Bon après-midi, Bonne soirée). Si un prénom est renseigné, il s'ajoute : « Bonjour Léa ».
+- Le bouton **Réglages** du menu garde toujours son nom : le prénom n'y apparaît plus.
+
+## 1.3.0 — 2026-10-04
+
+### Nouveautés
+- **Écran de bienvenue au premier lancement** (3 étapes, on peut tout passer) : prénom facultatif, choix de ce qu'on veut voir, et code d'accès facultatif avec un indice pour s'en souvenir. Les personnes qui utilisaient déjà Bullo ne le voient pas ; il se rouvre à tout moment avec « Refaire la présentation » (Réglages > Profil).
+- **Masquer ce qui ne sert pas** : Rappels, Rechercher, Outils, Explique-moi et Bien-être peuvent être cachés du menu (cases dans Réglages > Profil, ou choix rapides « L'essentiel / Études / Tout » à l'accueil). Accueil, Capturer, Inbox et Réglages restent toujours là. Rien n'est supprimé : on recoche et tout revient, données comprises.
+- **Indice du code d'accès**, affiché sur l'écran de verrouillage.
+
+### Corrections
+- **Onglets des Réglages qui chevauchaient le contenu en faisant défiler** : la barre d'onglets n'est plus collante, plus rien ne passe dessous.
+- L'écran de verrouillage passait sous le lecteur « Fond sonore » : il est maintenant au-dessus de tout.
+
+### À savoir
+- Il n'y a pas de compte en ligne : Bullo reste 100 % local. Le « compte » est un prénom et un code sur cet ordinateur. Le code est une protection de discrétion, pas un chiffrement des notes. Si on l'oublie, il ne peut pas être retrouvé : d'où l'indice.
+
+## 1.2.1 — 2026-10-04
+
+### Amélioration
+- **Réglages plus clairs** : la longue page est maintenant rangée en 6 onglets avec une icône chacun, pour trouver un réglage sans faire défiler : **Apparence** (thème, police, tailles, couleurs, daltonisme), **Confort** (une seule tâche, Pomodoro, raccourcis clavier), **Audio** (fond sonore, favoris, lecture vocale), **Données** (Google Drive, sauvegardes, enregistrements, vérification des outils), **Profil** (prénom, code d'accès, cours) et **À propos** (version, mise à jour). Le dernier onglet ouvert est conservé. Les onglets se parcourent aussi au clavier avec les flèches gauche et droite.
+- Aucun réglage n'a été retiré ni modifié : tout est au même endroit qu'avant, simplement rangé.
+
 ## 1.2.0 — 2026-10-04
 
 ### Nouveautés

@@ -108,3 +108,27 @@ Avec **Ollama lancé** et le modèle de résumé téléchargé :
 Avec **Ollama fermé** :
 - [ ] « Commencer » affiche « Cette fonctionnalité a besoin d'Ollama. Ouvre l'application Ollama, puis réessaie. », rien ne plante, ton texte est conservé.
 - [ ] Après avoir ouvert Ollama, « Commencer » fonctionne sans retaper.
+
+## 5 undecies — Longs textes et notes (v1.3.2)
+- [ ] Inbox : écrire une très longue note (plus de 300 caractères) : « Lire la suite » affiche tout, « Réduire » replie, « 🔊 Écouter » lit jusqu'à la dernière phrase.
+- [ ] Outils : coller un long texte, « Enregistrer comme note », puis vérifier dans l'Inbox qu'on peut tout lire et tout écouter.
+- [ ] Résumé : transcrire ou coller un cours de plus de 10 minutes de parole : le résumé et « À retenir » parlent aussi de la fin du cours (Ollama doit être ouvert ; plus c'est long, plus c'est lent).
+
+## 5 decies — Bienvenue et modules (v1.3.0)
+- [ ] Premier lancement (effacer les données de Bullo ou nouvel utilisateur) : l'écran de bienvenue s'affiche, 3 étapes.
+- [ ] Étape 2 : « L'essentiel », « Études », « Tout » cochent les bonnes cases ; décocher Bien-être le retire du menu à la fin.
+- [ ] Étape 3 : un code de moins de 4 chiffres ou deux codes différents sont refusés ; sans code, « Terminer sans code » fonctionne.
+- [ ] Relancer Bullo avec un code : l'écran de verrouillage affiche l'indice, le bon code ouvre.
+- [ ] Réglages > Profil : cocher/décocher un module l'ajoute/le retire du menu immédiatement ; « Refaire la présentation » rouvre l'écran.
+- [ ] Réglages : faire défiler, plus aucun onglet ne chevauche le contenu (fenêtre large et étroite).
+- [ ] Mise à jour depuis une 1.2.x : pas d'écran de bienvenue, menu complet comme avant.
+
+## 5 nonies — Réglages par onglets (v1.2.1)
+- [ ] Réglages affiche 6 onglets avec icône : Apparence, Confort, Audio, Données, Profil, À propos.
+- [ ] Un clic sur un onglet n'affiche que ses sections ; les flèches gauche/droite changent d'onglet.
+- [ ] Apparence : thème, police, tailles, daltonisme fonctionnent comme avant.
+- [ ] Confort : Pomodoro, mode une seule tâche, raccourcis clavier.
+- [ ] Audio : fond sonore, favoris, diagnostic du lecteur, vitesse de lecture vocale.
+- [ ] Données : Google Drive, sauvegardes, dossier des enregistrements, « Vérifier les outils ».
+- [ ] Profil : prénom, code d'accès, liste des cours. À propos : version 1.2.1, « Rechercher une mise à jour ».
+- [ ] Quitter Réglages puis y revenir : on retrouve le même onglet.

@@ -158,22 +158,81 @@ async fn transcribe(path: String) -> Result<String, String> {
     }).await.map_err(e)?
 }
 
+// Ollama lit par défaut très peu de texte à la fois (contexte de 2 à 4 k « tokens ») et COUPE sans prévenir ce qui dépasse :
+// un long cours n'était donc résumé qu'en partie. On demande ici un contexte adapté à la taille du texte, et au-delà d'un seuil
+// on découpe le texte en morceaux résumés séparément (puis fusionnés) plutôt que de perdre la fin.
+const OLLAMA_SINGLE_MAX: usize = 40_000; // caractères traités d'un coup (contexte 16 k)
+const OLLAMA_CHUNK: usize = 30_000;
+fn ollama_ctx(chars: usize) -> u32 {
+    let need = chars / 3 + 1500;
+    [4096u32, 8192, 16384].into_iter().find(|c| *c as usize >= need).unwrap_or(16384)
+}
+// Découpe en morceaux d'au plus `max` caractères, de préférence à une fin de phrase ou d'espace.
+fn split_text(text: &str, max: usize) -> Vec<String> {
+    let chars: Vec<char> = text.chars().collect();
+    let mut out = Vec::new();
+    let mut start = 0;
+    while start < chars.len() {
+        let mut end = (start + max).min(chars.len());
+        if end < chars.len() {
+            let lo = start + max / 2;
+            if let Some(p) = (lo..end).rev().find(|&i| matches!(chars[i], '.' | '!' | '?' | '\n')) { end = p + 1; }
+            else if let Some(p) = (lo..end).rev().find(|&i| chars[i].is_whitespace()) { end = p + 1; }
+        }
+        let piece: String = chars[start..end].iter().collect();
+        if !piece.trim().is_empty() { out.push(piece); }
+        start = end;
+    }
+    out
+}
+fn summarize_one(model: &str, text: &str) -> Result<serde_json::Value, String> {
+    let prompt = format!(
+        "Tu analyses la transcription d'un cours (ou d'une note vocale) en français, pour un élève dyslexique. Réponds uniquement en JSON avec les clés : \
+         \"resume\" (3 à 4 phrases très simples qui couvrent TOUT le texte, du début à la fin), \"a_retenir\" (liste des notions, définitions et idées clés), \
+         \"taches\" (devoirs et travail à faire, verbes à l'infinitif), \"echeances\" (dates de contrôles ou de rendus), \
+         \"questions\" (points à demander au professeur). N'invente rien.\n\nTranscription :\n{text}");
+    let agent = ureq::AgentBuilder::new().timeout(std::time::Duration::from_secs(600)).build();
+    let r: serde_json::Value = agent.post("http://localhost:11434/api/generate")
+        .send_json(serde_json::json!({ "model": model, "prompt": prompt, "stream": false, "format": "json", "keep_alive": "30s",
+            "options": { "num_ctx": ollama_ctx(text.chars().count()), "num_predict": 2048 } }))
+        .map_err(|er| ollama_err(model, er))?
+        .into_json().map_err(e)?;
+    serde_json::from_str(r["response"].as_str().unwrap_or("{}")).map_err(e)
+}
+
 // Extraction structurée via Ollama en local. keep_alive court : le modèle est libéré de la RAM juste après.
 #[tauri::command]
 async fn summarize(text: String) -> Result<serde_json::Value, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let model = ollama_model();
-        let prompt = format!(
-            "Tu analyses la transcription d'un cours (ou d'une note vocale) en français, pour un élève dyslexique. Réponds uniquement en JSON avec les clés : \
-             \"resume\" (3 à 4 phrases très simples), \"a_retenir\" (liste des notions, définitions et idées clés), \
-             \"taches\" (devoirs et travail à faire, verbes à l'infinitif), \"echeances\" (dates de contrôles ou de rendus), \
-             \"questions\" (points à demander au professeur). N'invente rien.\n\nTranscription :\n{text}");
-        let agent = ureq::AgentBuilder::new().timeout(std::time::Duration::from_secs(300)).build();
-        let r: serde_json::Value = agent.post("http://localhost:11434/api/generate")
-            .send_json(serde_json::json!({ "model": model, "prompt": prompt, "stream": false, "format": "json", "keep_alive": "30s" }))
-            .map_err(|er| ollama_err(&model, er))?
-            .into_json().map_err(e)?;
-        serde_json::from_str(r["response"].as_str().unwrap_or("{}")).map_err(e)
+        if text.chars().count() <= OLLAMA_SINGLE_MAX { return summarize_one(&model, &text); }
+        // Texte très long : un résumé par morceau, puis fusion des listes et un résumé global.
+        let mut resumes: Vec<String> = Vec::new();
+        let mut merged: std::collections::BTreeMap<&str, Vec<serde_json::Value>> = std::collections::BTreeMap::new();
+        for piece in split_text(&text, OLLAMA_CHUNK) {
+            let v = summarize_one(&model, &piece)?;
+            if let Some(r) = v["resume"].as_str() { if !r.trim().is_empty() { resumes.push(r.trim().to_string()); } }
+            for k in ["a_retenir", "taches", "echeances", "questions"] {
+                if let Some(a) = v[k].as_array() {
+                    let list = merged.entry(k).or_default();
+                    for x in a { if !list.contains(x) { list.push(x.clone()); } }
+                }
+            }
+        }
+        let joined = resumes.join(" ");
+        let resume = if resumes.len() <= 1 { joined } else {
+            let agent = ureq::AgentBuilder::new().timeout(std::time::Duration::from_secs(300)).build();
+            let prompt = format!("Voici les résumés des parties successives d'un même cours. Fais un seul résumé de 4 à 6 phrases très simples, en français, qui couvre toutes les parties dans l'ordre. N'invente rien. Réponds uniquement avec le résumé.\n\n{joined}");
+            match agent.post("http://localhost:11434/api/generate")
+                .send_json(serde_json::json!({ "model": model, "prompt": prompt, "stream": false, "keep_alive": "30s", "options": { "num_ctx": ollama_ctx(joined.chars().count()), "num_predict": 1024 } }))
+                .map_err(|er| ollama_err(&model, er)).and_then(|r| r.into_json::<serde_json::Value>().map_err(e)) {
+                Ok(r) => { let t = r["response"].as_str().unwrap_or("").trim().to_string(); if t.is_empty() { joined } else { t } }
+                Err(_) => joined,
+            }
+        };
+        let mut out = serde_json::json!({ "resume": resume });
+        for k in ["a_retenir", "taches", "echeances", "questions"] { out[k] = serde_json::Value::Array(merged.remove(k).unwrap_or_default()); }
+        Ok(out)
     }).await.map_err(e)?
 }
 
@@ -203,7 +262,7 @@ async fn explain_turn(topic: String, messages: Vec<ChatMsg>, bilan: bool) -> Res
         if bilan { msgs.push(serde_json::json!({ "role": "user", "content": format!("Sujet : {topic}\nFais le bilan maintenant.") })); }
         let agent = ureq::AgentBuilder::new().timeout(std::time::Duration::from_secs(300)).build();
         let r: serde_json::Value = agent.post("http://localhost:11434/api/chat")
-            .send_json(serde_json::json!({ "model": model, "messages": msgs, "stream": false, "keep_alive": "30s" }))
+            .send_json(serde_json::json!({ "model": model, "messages": msgs, "stream": false, "keep_alive": "30s", "options": { "num_ctx": 8192 } }))
             .map_err(|er| ollama_err(&model, er))?
             .into_json().map_err(e)?;
         let out = r["message"]["content"].as_str().unwrap_or("").trim().to_string();
@@ -254,9 +313,12 @@ async fn assist(mode: String, text: String) -> Result<String, String> {
     };
     tauri::async_runtime::spawn_blocking(move || {
         let model = ollama_model();
-        let agent = ureq::AgentBuilder::new().timeout(std::time::Duration::from_secs(300)).build();
+        let n = text.chars().count();
+        if n > OLLAMA_SINGLE_MAX { return Err(format!("Ce texte est trop long pour cet outil ({n} caractères, maximum {OLLAMA_SINGLE_MAX}). Découpe-le en plusieurs parties pour que rien ne soit perdu.")); }
+        let agent = ureq::AgentBuilder::new().timeout(std::time::Duration::from_secs(600)).build();
         let r: serde_json::Value = agent.post("http://localhost:11434/api/generate")
-            .send_json(serde_json::json!({ "model": model, "prompt": format!("{instr}\n\nTexte :\n{text}"), "stream": false, "keep_alive": "30s" }))
+            .send_json(serde_json::json!({ "model": model, "prompt": format!("{instr}\n\nTexte :\n{text}"), "stream": false, "keep_alive": "30s",
+                "options": { "num_ctx": ollama_ctx(n), "num_predict": 4096 } }))
             .map_err(|er| ollama_err(&model, er))?
             .into_json().map_err(e)?;
         Ok(r["response"].as_str().unwrap_or("").trim().to_string())

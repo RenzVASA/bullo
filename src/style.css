@@ -141,7 +141,7 @@ label input[type=range]{padding:0;border:0;background:transparent;accent-color:v
 .bcircle.big{transform:scale(1.15)}.bcircle small{font-size:1.4rem}
 
 /* --- Fenêtres, verrou, messages --- */
-#lock{position:fixed;inset:0;z-index:9;display:grid;place-items:center;background:var(--bg)}
+#lock{position:fixed;inset:0;z-index:90;display:grid;place-items:center;background:var(--bg)}
 #lock .card{width:min(360px,90vw);text-align:center}
 .modal{position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:rgba(6,10,32,.55)}
 .modal .card{width:min(400px,92vw);background:var(--panel);box-shadow:0 30px 60px -20px rgba(0,0,0,.5)}
@@ -213,3 +213,29 @@ body.single-task-active nav{display:none} body.single-task-active #main{max-widt
 .ex-busy{display:flex;align-items:center;gap:10px}.spin{width:16px;height:16px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);animation:exspin 1s linear infinite;flex:none}
 @keyframes exspin{to{transform:rotate(360deg)}}
 .reduce-motion .spin{animation:none}@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+
+/* Réglages par catégories */
+section[hidden]{display:none!important}
+.set-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 18px}
+.set-tab{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border:1.5px solid var(--line);border-radius:999px;background:var(--panel);color:var(--mute);font-weight:700;cursor:pointer}
+.set-tab:hover{border-color:var(--accent);color:var(--ink)}
+.set-tab.on,.set-tab[aria-selected=true]{background:color-mix(in srgb,var(--accent) 16%,var(--panel));border-color:var(--accent);color:var(--ink)}
+.set-tab .ic{flex:none}
+@media (max-width:700px){.set-tab span{font-size:.9rem}.set-tab{padding:8px 12px}}
+
+/* Modules et bienvenue */
+nav button[hidden]{display:none!important}
+.mods{display:grid;gap:6px;margin:10px 0}
+.chk.mod{align-items:flex-start;padding:10px 12px;border:1.5px solid var(--line);border-radius:14px}
+.chk.mod span{display:grid;gap:2px}
+.chk.mod small{font-size:.88em}
+#welcome{position:fixed;inset:0;z-index:90;display:flex;background:var(--bg);overflow:auto;padding:16px}
+#welcome .card{width:min(560px,100%);margin:auto}
+.w-dots{display:flex;gap:6px;margin-bottom:4px}.w-dots i{width:26px;height:6px;border-radius:99px;background:var(--line)}.w-dots i.on{background:var(--accent)}
+.w-count{margin:0 0 6px;font-size:.85em}
+#welcome label{display:grid;gap:6px;margin:12px 0}
+#welcome .chk{display:flex}
+.chk.mod input{margin-top:4px;flex:none}
+#welcome .mods label{margin:0}
+.greet{margin:-.2em 0 1.1em}
+.body-full{white-space:pre-wrap;overflow-wrap:anywhere}.body-ex{overflow-wrap:anywhere}.body-act{gap:6px;margin:6px 0 0}

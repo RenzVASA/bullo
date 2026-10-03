@@ -137,6 +137,9 @@ Par défaut (réglable dans Réglages > Fond sonore), Bullo **met en sourdine to
 ### Bien-être
 Onglet **Bien-être** : parking de pensées (Ctrl+Maj+P depuis n'importe où : tu notes l'idée parasite, tu la tries plus tard, ou tu en fais une tâche), respiration guidée (carrée, 4-7-8, cohérence 5-5, sans animation si « réduire les animations » est activé) et pauses douces (rappel d'eau, d'étirement, de regarder au loin).
 
+### Premier lancement et modules
+Au premier lancement, Bullo propose en 3 étapes (toutes facultatives) : un prénom, ce qu'on veut afficher (Rappels, Rechercher, Outils, Explique-moi, Bien-être peuvent être masqués), et un code d'accès avec indice. Tout se change ensuite dans Réglages > Profil. Il n'y a pas de compte en ligne : le profil et le code restent sur l'ordinateur, et le code protège la discrétion, il ne chiffre pas les notes.
+
 ### Explique-moi (méthode Feynman)
 Onglet **Explique-moi** : tu indiques un sujet et tu l'expliques avec tes mots, à l'écrit ou à l'oral (la dictée utilise la transcription locale de Bullo). Un « élève curieux de 12 ans », porté par Ollama en local, te pose 1 à 3 questions sur ce qui manque, **sans jamais donner la réponse**. L'échange dure 3 séries au maximum, puis Bullo fait un bilan très court : ce qui est solide, et les sujets à revoir. Tu peux t'arrêter à tout moment. Rien ne démarre tout seul. Les séances sont gardées dans « Mes explications » (sur ton ordinateur uniquement). Il faut qu'Ollama soit ouvert et que le modèle de résumé soit téléchargé (Réglages > Vérifier les outils). Le texte de la consigne donnée au modèle est la constante `EXPLAIN_PROMPT` en haut de la section « Explique-moi » de `src-tauri/src/main.rs`. Un petit modèle local peut parfois laisser échapper une réponse malgré la consigne.
 

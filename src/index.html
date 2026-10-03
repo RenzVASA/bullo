@@ -42,7 +42,7 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "
 const errText = x => (x && x.message) ? x.message : String(x);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const main = $("#main");
-const APP_VERSION = "1.2.0", ABOUT_CREDIT = "Vibe codé par Renz-VASA, avec un peu d’intelligence artificielle ✨";
+const APP_VERSION = "1.3.2", ABOUT_CREDIT = "Vibe codé par Renz-VASA, avec un peu d’intelligence artificielle ✨";
 
 // Clés de stockage locales (préfixe bullo_). Les anciennes clés de la version précédente sont migrées une seule fois, puis supprimées.
 const KEYS = { cfg: "bullo_cfg", tags: "bullo_tags", vers: "bullo_note_versions", draft: "bullo_draft", focus: "bullo_focus", pom: "bullo_pom_enabled", googleWhen: "bullo_google_when" };
@@ -240,6 +240,7 @@ const LABEL = { note: "Note", tache: "Tâche", reunion: "Cours", cours: "Cours",
 let view = "home";
 
 function nav(v) {
+  if (!modOn(v)) v = "home";
   view = v; if (v !== "home") document.body.classList.remove("single-task-active");
   document.querySelectorAll("nav [data-v]").forEach(b => b.classList.toggle("on", b.dataset.v === v));
   br.run++;
@@ -254,6 +255,12 @@ document.querySelectorAll("nav [data-v]").forEach(b => b.onclick = () => nav(b.d
 let sizes = [18, 21, 24], si = 0;
 
 const ICON = {
+  look: '<circle cx="13.5" cy="6.5" r=".6"/><circle cx="17.5" cy="10.5" r=".6"/><circle cx="8.5" cy="7.5" r=".6"/><circle cx="6.5" cy="12.5" r=".6"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.5-.7 1.5-1.5 0-.4-.2-.8-.4-1-.3-.3-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5H16c3.3 0 6-2.7 6-6 0-4.9-4.5-9-10-9z"/>',
+  comfort: '<path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M1 14h6"/><path d="M9 8h6"/><path d="M17 16h6"/>',
+  audio: '<path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/>',
+  data: '<path d="M17.5 19H9a7 7 0 1 1 6.7-9h1.8a4.5 4.5 0 1 1 0 9z"/>',
+  profile: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  about: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
   corriger: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   simplifier: '<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>',
   decomposer: '<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
@@ -282,10 +289,17 @@ const dataOf = it => { try { return JSON.parse(it.data) || null; } catch { retur
 const courseOf = it => it.course || (it.kind === "cours" || it.kind === "reunion" ? (it.title.split(" · ")[0] || "") : "");
 const dateTag = it => `<time class="when" datetime="${esc(it.created)}">${esc(when(it.created))}</time>`;
 
+// Corps d’un élément : extrait si c’est long, avec « Lire la suite » ; « Écouter » lit toujours le texte complet.
+const EXCERPT = 160;
+const bodyHtml = body => {
+  const long = body.length > EXCERPT;
+  return `<div class="mute body-ex">${esc(long ? body.slice(0, EXCERPT).trimEnd() + "…" : body)}</div>${long ? `<div class="mute body-full" hidden>${esc(body)}</div>` : ""}
+  <div class="row body-act">${long ? `<button type="button" class="ghost sm" data-more aria-expanded="false">Lire la suite</button>` : ""}<button type="button" class="ghost sm" data-hear>🔊 Écouter</button></div>`;
+};
 const itemRow = (it, extra = "") => it.kind === "cours" && dataOf(it) ? courseCard(it) : `<div class="item" data-id="${it.id}">
   ${it.kind === "tache" ? `<input type="checkbox" style="width:auto;margin-top:6px" ${it.done ? "checked" : ""} aria-label="Fait">` : ""}
   <div class="t"><b>${esc(it.title)}</b> <small>${LABEL[it.kind] || it.kind}</small> ${dateTag(it)}
-  ${it.body ? `<div class="mute">${esc(it.body.slice(0, 160))}</div>` : ""}${tagHtml(it.id)}</div>${extra || `<button class="ghost" data-tag="${it.id}">Tag</button><button class="ghost" data-del>Supprimer</button>`}</div>`;
+  ${it.body ? bodyHtml(it.body) : ""}${tagHtml(it.id)}</div>${extra || `<button class="ghost" data-tag="${it.id}">Tag</button><button class="ghost" data-del>Supprimer</button>`}</div>`;
 
 // Un cours = une seule carte : résumé + devoirs, et trois boutons (À retenir, Transcription, Écouter) + Supprimer. Tout dans l'appli.
 function courseCard(it) {
@@ -310,7 +324,8 @@ function courseCard(it) {
 async function home() {
   const tasks = (await invoke("list_items", { kind: "tache" })).filter(t => !t.done).reverse();
   const cur = tasks[0];
-  main.innerHTML = `<h1>Bonjour</h1>
+  const gr = greet();
+  main.innerHTML = `<h1>${esc(gr.title)}</h1><p class="mute greet">${gr.wish}</p>
   <div class="card now"><h2 style="margin-top:0">Maintenant</h2>${cfg.singleTask ? '<button class="ghost sm" id="exitsingle" style="float:right">Quitter ce mode</button>' : ""}
   ${cur ? `<p>${esc(cur.title)}</p><button class="primary" id="done">C'est fait</button> <button class="ghost" id="start">Commencer le focus</button>
      ${tasks.length > 1 ? `<span class="mute"> Ensuite : ${esc(tasks[1].title)}</span>` : ""}`
@@ -337,7 +352,7 @@ async function inbox() {
   <div id="list">${items.length ? items.map(i => itemRow(i, `<button class="ghost" data-del>Supprimer</button>`)).join("") : `<p class="mute">Ton Inbox est vide.</p>`}</div>`;
   main.querySelectorAll("[data-k]").forEach(b => b.onclick = async () => {
     const t = $("#q").value.trim(); if (!t) return;
-    await invoke("add_item", { kind: b.dataset.k, title: t.split("\n")[0].slice(0, 120), body: t.includes("\n") ? t : "" }); inbox();
+    await invoke("add_item", { kind: b.dataset.k, title: t.split("\n")[0].slice(0, 120), body: t.includes("\n") || t.length > 120 ? t : "" }); inbox();
   });
   $("#exp").onclick = globalExport;
   bindList();
@@ -354,6 +369,14 @@ function bindList() {
     const id = +el.dataset.id, cb = $("input[type=checkbox]", el), del = $("[data-del]", el);
     if (cb) cb.onchange = () => invoke("set_done", { id, done: cb.checked });
     if (del) del.onclick = async () => { await invoke("delete_item", { id }); nav(view); };
+    const more = $("[data-more]", el);
+    if (more) more.onclick = () => {
+      const open = more.getAttribute("aria-expanded") !== "true";
+      $(".body-full", el).hidden = !open; $(".body-ex", el).hidden = open;
+      more.setAttribute("aria-expanded", String(open)); more.textContent = open ? "Réduire" : "Lire la suite";
+    };
+    const hear = $("[data-hear]", el);
+    if (hear) hear.onclick = () => { const full = $(".body-full", el) || $(".body-ex", el); readAloud(($("b", el)?.textContent || "") + ". " + full.textContent); };
   });
   main.querySelectorAll(".course").forEach(el => {
     const id = +el.dataset.id, au = $("audio", el);
@@ -418,7 +441,7 @@ function resultHtml() {
     ${cap.audio ? `<audio id="original-audio" controls preload="metadata" style="width:100%" hidden></audio><p class="msg" id="original-msg" role="status"></p>` : ""}
     ${list("À retenir", r.a_retenir)}${list("Devoirs", r.taches)}${list("Dates", r.echeances)}${list("Questions pour le prof", r.questions)}
     ${remindHtml(r)}
-    ${cap.choose ? chooser() : `<div class="row"><button class="primary" id="save">Enregistrer dans un cours</button><button class="ghost" id="exFromCap">Explique-moi</button></div>`}</div>`;
+    ${cap.choose ? chooser() : `<div class="row"><button class="primary" id="save">Enregistrer dans un cours</button>${modOn("explain") ? `<button class="ghost" id="exFromCap">Explique-moi</button>` : ""}</div>`}</div>`;
 }
 
 // Le modèle d'IA renvoie parfois une forme inattendue (une phrase au lieu d'une liste, un objet…). On remet tout au propre,
@@ -755,7 +778,19 @@ function bgOnRecord(start) {
 }
 
 // ===== Réglages : tout est enregistré localement et réappliqué au démarrage =====
+// Modules facultatifs : Accueil, Capturer, Inbox et Réglages restent toujours là ; le reste peut être masqué.
+const MODS = [
+  ["reminders", "Rappels", "Des rappels pour ne rien oublier."],
+  ["search", "Rechercher", "Retrouver une note ou un cours."],
+  ["tools", "Outils", "Corriger, simplifier, découper une tâche avec l’IA locale."],
+  ["explain", "Explique-moi", "Expliquer un sujet pour vérifier qu’on l’a compris."],
+  ["calm", "Bien-être", "Respiration, pauses et moments de calme."]
+];
+const MOD_IDS = MODS.map(m => m[0]);
+const modOn = id => !MOD_IDS.includes(id) || cfg.mods?.[id] !== false;
+const PRESETS = { essential: [], student: ["reminders", "search", "tools", "explain"], all: MOD_IDS };
 const DEF = {
+  mods: Object.fromEntries(MOD_IDS.map(i => [i, true])), onboarded: false, pinHint: "",
   font: "body", size: 18, lh: 1.6, letter: 0, theme: "auto", accent: "#5b4bf5", contrast: false, colorblind: "none", soft: false, reduceMotion: false, mask: false,
   name: "", pin: "", courses: [], hidePlayer: false, pomodoro: 25, breakMinutes: 5, ttsRate: 1, ttsVoice: "", singleTask: false, idleMinutes: 5,
   shortcuts: { search: "Ctrl+K", capture: "Ctrl+Shift+R", read: "Alt+L", park: "Ctrl+Shift+P" }, breakEvery: 0,
@@ -779,6 +814,8 @@ function sanitizeCfg(c) {
   if (!/^#[0-9a-f]{6}$/i.test(String(o.accent))) o.accent = DEF.accent;
   if (!Array.isArray(o.courses)) o.courses = [];
   o.shortcuts = { ...DEF.shortcuts, ...(o.shortcuts && typeof o.shortcuts === "object" ? o.shortcuts : {}) };
+  o.mods = Object.fromEntries(MOD_IDS.map(i => [i, !(o.mods && typeof o.mods === "object") || o.mods[i] !== false]));
+  o.onboarded = o.onboarded === true; o.pinHint = String(o.pinHint || "").slice(0, 80);
   delete o.fontSize; delete o.pomEnabled;
   return o;
 }
@@ -854,19 +891,82 @@ function applyCfg() {
   let acc = null, acc2 = null, rec = null;
   if (pal) [acc, acc2, rec] = pal[isDark() ? "dark" : "light"]; else if (custom && !cfg.contrast) acc = cfg.accent;
   for (const [k, v] of [["--accent", acc], ["--accent2", acc2], ["--rec", rec], ["--on", acc ? (lum(acc) > .4 ? "#0d1017" : "#ffffff") : null]]) v ? r.setProperty(k, v) : r.removeProperty(k);
-  const me = $("#me span"); if (me) me.textContent = cfg.name ? "👤 " + cfg.name : "Réglages";
+  document.querySelectorAll("nav [data-v]").forEach(b => { b.hidden = !modOn(b.dataset.v); });
   saveCfg(); bgUi?.();
 }
-try { cfg = sanitizeCfg(JSON.parse(localStorage.getItem(KEYS.cfg))); } catch { cfg = sanitizeCfg(null); }
+try {
+  const raw = JSON.parse(localStorage.getItem(KEYS.cfg));
+  // Quelqu’un qui utilisait déjà Bullo avant cet écran n’a pas à le revoir.
+  if (raw && typeof raw === "object" && !("onboarded" in raw)) raw.onboarded = true;
+  cfg = sanitizeCfg(raw);
+} catch { cfg = sanitizeCfg(null); }
 matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => { if (cfg.theme === "auto") applyCfg(); });
 
 const sha = async t => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)))].map(b => b.toString(16).padStart(2, "0")).join("");
+// Salutation selon l’heure ; le prénom du profil est ajouté s’il existe.
+function greet(h = new Date().getHours()) {
+  const hello = h >= 5 && h < 18 ? "Bonjour" : "Bonsoir";
+  const wish = h >= 5 && h < 12 ? "Bonne matinée" : h >= 12 && h < 18 ? "Bon après-midi" : h >= 18 && h < 22 ? "Bonne soirée" : "Pense à te reposer";
+  return { title: hello + (cfg.name ? " " + cfg.name : ""), wish };
+}
 function lock() {
   if (!cfg.pin || $("#lock")) return;
   const o = document.createElement("div"); o.id = "lock";
-  o.innerHTML = `<div class="card"><h1>Bonjour${cfg.name ? " " + esc(cfg.name) : ""}</h1><input type="password" inputmode="numeric" placeholder="Code" aria-label="Code"><p class="msg err" role="alert"></p></div>`;
+  o.innerHTML = `<div class="card"><h1>${esc(greet().title)}</h1><input type="password" inputmode="numeric" placeholder="Code" aria-label="Code"><p class="msg err" role="alert"></p>${cfg.pinHint ? `<p class="mute">Indice : ${esc(cfg.pinHint)}</p>` : ""}</div>`;
   document.body.append(o); const i = o.querySelector("input"); i.focus();
   i.oninput = async () => { if (await sha(i.value) === cfg.pin) o.remove(); else o.querySelector("p").textContent = i.value.length >= 4 ? "Code incorrect" : ""; };
+}
+// ===== Première ouverture : choisir ce qu’on affiche, un prénom, et (si on veut) un code d’accès. Tout reste sur cet ordinateur. =====
+function welcome(again) {
+  if ($("#welcome")) return;
+  const o = document.createElement("div"); o.id = "welcome"; o.setAttribute("role", "dialog"); o.setAttribute("aria-modal", "true"); o.setAttribute("aria-labelledby", "wTitle");
+  document.body.append(o);
+  const st = { step: 0, name: cfg.name, mods: { ...cfg.mods }, pin: "", pin2: "", hint: cfg.pinHint, err: "" };
+  const dots = () => `<div class="w-dots" aria-hidden="true">${[0, 1, 2].map(i => `<i class="${i === st.step ? "on" : ""}"></i>`).join("")}</div><p class="mute w-count">Étape ${st.step + 1} sur 3</p>`;
+  const finish = async skip => {
+    if (!skip && st.pin) {
+      if (!/^\d{4,}$/.test(st.pin)) { st.err = "Le code doit faire au moins 4 chiffres (ou laisse la case vide)."; return draw(); }
+      if (st.pin !== st.pin2) { st.err = "Les deux codes ne sont pas identiques."; return draw(); }
+      try { cfg.pin = await sha(st.pin); cfg.pinHint = st.hint.trim(); } catch { st.err = "Impossible d’enregistrer le code sur ce système."; return draw(); }
+    }
+    if (!skip) { cfg.name = st.name.trim().slice(0, 40); cfg.mods = { ...st.mods }; }
+    cfg.onboarded = true; applyCfg(); o.remove();
+    if (again) settings(); else nav("home");
+    if (skip) notice("Tout est affiché. Tu peux changer ça dans Réglages › Profil.");
+  };
+  const draw = () => {
+    const keep = o.contains(document.activeElement) ? document.activeElement.id : "";
+    let body;
+    if (st.step === 0) body = `<h1 id="wTitle">Bienvenue dans Bullo</h1>
+      <p class="lead">Un espace calme pour capter une idée, un cours ou une tâche. Tout reste sur cet ordinateur : il n’y a pas de compte en ligne.</p>
+      <label>Comment veux-tu qu’on t’appelle ? (facultatif)<input id="wName" maxlength="40" value="${esc(st.name)}" autocomplete="off"></label>
+      <div class="row"><button class="primary" id="wNext">Suivant</button><button class="ghost" id="wSkip">Passer et tout afficher</button></div>`;
+    else if (st.step === 1) body = `<h1 id="wTitle">Qu’est-ce que tu veux voir ?</h1>
+      <p class="lead">Cache ce qui ne te sert pas, ça allège l’écran. Tu pourras tout changer plus tard dans Réglages.</p>
+      <div class="row chips" role="group" aria-label="Choix rapides"><button class="chip" data-pre="essential">L’essentiel</button><button class="chip" data-pre="student">Études</button><button class="chip" data-pre="all">Tout</button></div>
+      <p class="mute">Toujours présents : Accueil, Capturer, Inbox, Réglages.</p>
+      <div class="mods">${MODS.map(([id, l, d]) => `<label class="chk mod"><input type="checkbox" data-wmod="${id}" ${st.mods[id] !== false ? "checked" : ""}> <span><b>${esc(l)}</b><small class="mute">${esc(d)}</small></span></label>`).join("")}</div>
+      <div class="row"><button class="ghost" id="wBack">Retour</button><button class="primary" id="wNext">Suivant</button></div>`;
+    else body = `<h1 id="wTitle">Un code d’accès ? (facultatif)</h1>
+      <p class="lead">Si d’autres personnes utilisent cet ordinateur, Bullo peut demander un code à l’ouverture. C’est un rideau de discrétion, pas un coffre-fort : tes notes ne sont pas chiffrées. Et si tu oublies le code, on ne peut pas le retrouver pour toi : mets un indice.</p>
+      <label>Code (4 chiffres ou plus)<input id="wPin" type="password" inputmode="numeric" autocomplete="off" value="${esc(st.pin)}"></label>
+      <label>Même code encore une fois<input id="wPin2" type="password" inputmode="numeric" autocomplete="off" value="${esc(st.pin2)}"></label>
+      <label>Indice (facultatif, visible à l’ouverture)<input id="wHint" maxlength="80" autocomplete="off" value="${esc(st.hint)}"></label>
+      ${st.err ? `<p class="msg err" role="alert">${esc(st.err)}</p>` : ""}
+      <div class="row"><button class="ghost" id="wBack">Retour</button><button class="primary" id="wDone">${st.pin ? "Terminer avec ce code" : "Terminer sans code"}</button></div>`;
+    o.innerHTML = `<div class="card">${dots()}${body}</div>`;
+    const g = id => o.querySelector("#" + id);
+    const val = () => { if (g("wName")) st.name = g("wName").value; if (g("wPin")) { st.pin = g("wPin").value; st.pin2 = g("wPin2").value; st.hint = g("wHint").value; } };
+    o.querySelectorAll("[data-wmod]").forEach(c => c.onchange = () => { st.mods[c.dataset.wmod] = c.checked; });
+    o.querySelectorAll("[data-pre]").forEach(b => b.onclick = () => { const on = PRESETS[b.dataset.pre]; st.mods = Object.fromEntries(MOD_IDS.map(i => [i, on.includes(i)])); draw(); });
+    if (g("wNext")) g("wNext").onclick = () => { val(); st.step++; st.err = ""; draw(); };
+    if (g("wBack")) g("wBack").onclick = () => { val(); st.step--; st.err = ""; draw(); };
+    if (g("wSkip")) g("wSkip").onclick = () => finish(true);
+    if (g("wDone")) g("wDone").onclick = () => { val(); finish(false); };
+    o.onkeydown = e => { if (e.key === "Enter" && e.target.tagName === "INPUT" && e.target.type !== "checkbox") { e.preventDefault(); (g("wNext") || g("wDone"))?.click(); } };
+    (keep && g(keep) || g("wName") || g("wPin") || o.querySelector("button.primary"))?.focus();
+  };
+  draw();
 }
 function exportTranscript(text) { if (text.trim()) downloadText(text, "txt"); else notice("La transcription est vide.", true); }
 async function saveAsNote(text) {
@@ -945,7 +1045,7 @@ function readTarget() {
   const f = document.activeElement; if (f && f.tagName === "TEXTAREA" && f.value.trim()) return f.value;
   return cap.text || tl.text || "";
 }
-const SHORTCUT_RUN = { search: () => nav("search"), capture: () => nav("capture"), read: () => readAloud(readTarget()), park: () => parkThought() };
+const SHORTCUT_RUN = { search: () => modOn("search") && nav("search"), capture: () => nav("capture"), read: () => readAloud(readTarget()), park: () => parkThought() };
 addEventListener("keydown", e => {
   if ($("#lock") || e.target.classList?.contains("shortcut")) return;
   const c = comboOf(e); if (!c) return;
@@ -1040,6 +1140,8 @@ function gWizard(i) {
   (q("input") || q("#gwOpen") || q("#gwNext") || q("#gwConn"))?.focus();
 }
 let gConnecting = false;
+const SET_CATS = [["look", "Apparence"], ["comfort", "Confort"], ["audio", "Audio"], ["data", "Données"], ["profile", "Profil"], ["about", "À propos"]];
+let setCat = "look";
 function settings() {
   const opt = (v, l, cur) => `<option value="${esc(v)}" ${String(cur) === String(v) ? "selected" : ""}>${esc(l)}</option>`;
   const sel = (k, o) => `<select data-c="${k}">${Object.entries(o).map(([v, l]) => opt(v, l, cfg[k])).join("")}</select>`;
@@ -1047,7 +1149,8 @@ function settings() {
   const chk = (k, l) => `<label class="chk"><input type="checkbox" data-c="${k}" ${cfg[k] ? "checked" : ""}> ${l}</label>`;
   const sc = cfg.shortcuts;
   main.innerHTML = `<h1>Réglages</h1><p class="lead">Personnalise Bullo. Chaque choix est conservé sur cet ordinateur et réappliqué au démarrage.</p>
-  <section class="card"><h2>Apparence</h2>
+  <div class="set-tabs" role="tablist" aria-label="Catégories de réglages">${SET_CATS.map(([k, l]) => `<button type="button" role="tab" class="set-tab" id="st-${k}" data-cat-tab="${k}" aria-selected="false" aria-controls="main">${ico(k, 20)}<span>${l}</span></button>`).join("")}</div>
+    <section data-cat="look" class="card"><h2>Apparence</h2>
     <div class="grid"><label>Thème ${sel("theme", { auto: "Système", light: "Clair", dark: "Sombre" })}</label>
     <label>Police <select data-c="font" id="fontSel"></select></label></div>
     <p class="msg" id="fontStatus" role="status">Vérification des polices…</p>
@@ -1058,42 +1161,58 @@ function settings() {
     <label>Mode daltonien (palette adaptée) ${sel("colorblind", { none: "Aucun", deuteranopia: "Deutéranopie (rouge-vert)", protanopia: "Protanopie (rouge-vert)", tritanopia: "Tritanopie (bleu-jaune)", achromatopsia: "Niveaux de gris renforcés" })}</label>
     ${chk("contrast", "Contraste élevé (noir/blanc, bordures et focus renforcés)")}${chk("soft", "Thème doux (moins éblouissant)")}${chk("reduceMotion", "Réduire les animations")}${chk("mask", "Masque de lecture (met en avant quelques lignes)")}
     <div class="row"><button class="ghost" id="resetLook">Réinitialiser l’apparence</button></div></section>
-  <section class="card"><h2>Pomodoro</h2><label class="chk"><input type="checkbox" id="pomEnabled" ${localStorage.getItem(KEYS.pom) === "true" ? "checked" : ""}> Activer le widget flottant</label>
+  <section data-cat="comfort" class="card"><h2>Pomodoro</h2><label class="chk"><input type="checkbox" id="pomEnabled" ${localStorage.getItem(KEYS.pom) === "true" ? "checked" : ""}> Activer le widget flottant</label>
     <div class="grid"><label>Travail (minutes)<input type="number" min="1" max="120" data-c="pomodoro" value="${cfg.pomodoro}"></label><label>Pause (minutes)<input type="number" min="1" max="60" data-c="breakMinutes" value="${cfg.breakMinutes}"></label></div>
     <p class="msg">Widget déplaçable, qui reste visible quand tu changes de page. Clique sur le minuteur pour afficher ses boutons.</p></section>
-  <section class="card"><h2>Lecture vocale</h2><label>Vitesse ${rng("ttsRate", .5, 2, .1, v => (+v).toFixed(1) + "×")}</label>
+  <section data-cat="audio" class="card"><h2>Lecture vocale</h2><label>Vitesse ${rng("ttsRate", .5, 2, .1, v => (+v).toFixed(1) + "×")}</label>
     <label>Voix<select id="ttsVoice"><option value="">Voix française automatique</option></select></label><p class="msg" id="ttsInfo"></p>
     <div class="row"><button class="primary" id="ttsTest">Tester la voix</button><button class="ghost" id="ttsStop">Arrêter</button></div>
     <p class="mute">Lecture assurée par la synthèse vocale du Mac (aucun réseau). Les voix se gèrent dans Réglages Système > Accessibilité > Contenu énoncé.</p></section>
-  <section class="card"><h2>Google Drive et sauvegardes</h2><div id="gbox"></div>
+  <section data-cat="data" class="card"><h2>Google Drive et sauvegardes</h2><div id="gbox"></div>
     <h2>Notes et cours</h2><div class="row"><button class="ghost" id="backupItems">Sauvegarder mes notes et cours…</button><button class="ghost danger" id="restoreItems">Restaurer une sauvegarde…</button></div>
     <p class="mute">La restauration remplace tout le contenu actuel. Les fichiers audio ne sont pas inclus dans la sauvegarde.</p>
     <h2>Réglages</h2><div class="row"><button class="ghost" id="localExport">Exporter mes réglages (.json)</button><button class="ghost" id="localImport">Importer mes réglages (.json)</button><input id="importFile" type="file" accept="application/json" hidden></div><p id="syncMsg" class="msg" role="status"></p></section>
-  <section class="card"><h2>Raccourcis clavier</h2><p class="mute">Clique dans un champ puis appuie sur la combinaison voulue (avec Ctrl ou Alt ; Ctrl = ⌘ sur Mac). Retour arrière pour effacer. Ctrl+K reste toujours « Rechercher ».</p>
+  <section data-cat="comfort" class="card"><h2>Raccourcis clavier</h2><p class="mute">Clique dans un champ puis appuie sur la combinaison voulue (avec Ctrl ou Alt ; Ctrl = ⌘ sur Mac). Retour arrière pour effacer. Ctrl+K reste toujours « Rechercher ».</p>
     ${Object.entries(SHORTCUT_ACTIONS).map(([k, l]) => `<label>${l}<input class="shortcut" readonly data-shortcut="${k}" value="${esc(sc[k] || "")}" placeholder="Aucun" aria-label="Raccourci pour ${l}. Appuie sur la combinaison voulue."></label>`).join("")}
     <div class="row"><button class="ghost" id="resetShortcuts">Rétablir les raccourcis par défaut</button></div><p id="shortcutMsg" class="msg" role="status"></p></section>
-  <section class="card"><h2>Fond sonore</h2><p class="mute">Petit lecteur fixe en bas de la fenêtre. Il joue des ambiances générées par l’appli : il est distinct de l’audio de tes enregistrements.</p>
+  <section data-cat="audio" class="card"><h2>Fond sonore</h2><p class="mute">Petit lecteur fixe en bas de la fenêtre. Il joue des ambiances générées par l’appli : il est distinct de l’audio de tes enregistrements.</p>
     <div class="grid"><label>Source du lecteur<select data-c="bgSource">${Object.entries(SOURCES).map(([k, v]) => opt(k, v.label, cfg.bgSource)).join("")}</select></label><label>Son d’ambiance par défaut<select data-c="bgSound">${SOUNDS.map(s => opt(s.id, s.name, cfg.bgSound)).join("")}</select></label><label>Volume par défaut ${rng("bgVolume", 0, 1, .01, v => Math.round(v * 100) + " %")}</label></div>
     ${chk("bgBar", "Afficher la barre du fond sonore")}${chk("bgFavOnly", "Avec ⏮ ⏭, ne parcourir que mes ambiances favorites")}${chk("bgPauseOnRec", "Couper le son de l’ordinateur pendant un enregistrement (Bullo, navigateur, Spotify, Music… rétabli ensuite)")}
     <h2>Diagnostic du lecteur</h2><p class="mute">Si le lecteur ne voit pas ta musique ou ne répond pas (Opera GX, par exemple), ce bouton montre ce que Bullo détecte. Envoie-moi le résultat.</p>
     <div class="row"><button class="ghost" id="diag">Lancer le diagnostic</button><button class="ghost" id="diagKey">Tester la touche lecture/pause</button></div>
     <pre id="diagOut" class="diag" hidden></pre><div class="row"><button class="ghost sm" id="diagCopy" hidden>Copier le résultat</button></div><p class="msg" id="diagMsg" role="status"></p></section>
-  <section class="card" id="favCard">${favsHtml()}</section>
-  <section class="card"><h2>Confort et concentration</h2>${chk("singleTask", "Mode une seule tâche (Accueil)")}${chk("hidePlayer", "Masquer le lecteur audio dans les cours")}
+  <section data-cat="audio" class="card" id="favCard">${favsHtml()}</section>
+  <section data-cat="comfort" class="card"><h2>Confort et concentration</h2>${chk("singleTask", "Mode une seule tâche (Accueil)")}${chk("hidePlayer", "Masquer le lecteur audio dans les cours")}
     <label>Rappel d’inactivité (minutes, 0 = désactivé)<input type="number" min="0" max="120" data-c="idleMinutes" value="${cfg.idleMinutes}"></label></section>
-  <section class="card"><h2>Profil et confidentialité</h2><label>Prénom<input data-c="name" value="${esc(cfg.name)}" maxlength="40"></label>
+  <section data-cat="profile" class="card"><h2>Ce que j’affiche</h2>
+    <p class="mute">Accueil, Capturer, Inbox et Réglages restent toujours là. Le reste, tu le montres ou tu le caches : rien n’est supprimé, tes données sont conservées.</p>
+    <div class="mods">${MODS.map(([id, l, d]) => `<label class="chk mod"><input type="checkbox" data-mod="${id}" ${modOn(id) ? "checked" : ""}> <span><b>${esc(l)}</b><small class="mute">${esc(d)}</small></span></label>`).join("")}</div>
+    <div class="row"><button class="ghost" id="redoWelcome">Refaire la présentation</button></div>
+    <h2>Profil et confidentialité</h2><label>Prénom<input data-c="name" value="${esc(cfg.name)}" maxlength="40"></label>
     <label>Code d’accès (4 chiffres ou plus)<input type="password" inputmode="numeric" id="pinNew" autocomplete="off" placeholder="${cfg.pin ? "Code défini — saisis-en un nouveau pour le changer" : "Aucun code"}"></label>
+    <label>Indice pour te rappeler le code (facultatif, visible sur l’écran de verrouillage)<input data-c="pinHint" value="${esc(cfg.pinHint)}" maxlength="80"></label>
     <div class="row"><button class="ghost" id="pinSave">Enregistrer le code</button>${cfg.pin ? `<button class="ghost" id="pinDel">Retirer le code</button>` : ""}</div><p id="pinMsg" class="msg" role="status"></p>
     <h2>Mes cours</h2><div class="row chips" id="courseList">${cfg.courses.length ? cfg.courses.map((c, i) => `<span class="chip">${esc(c)} <button class="ghost sm" data-delcourse="${i}" aria-label="Retirer le cours ${esc(c)} de la liste">✕</button></span>`).join("") : `<span class="mute">Aucun cours pour l’instant.</span>`}</div>
     <p class="mute">Retirer un cours de la liste ne supprime aucune note.</p></section>
-  <section class="card"><h2>Enregistrements et outils</h2><p class="mute">Dossier des enregistrements : <code id="audioDir">…</code></p>
+  <section data-cat="data" class="card"><h2>Enregistrements et outils</h2><p class="mute">Dossier des enregistrements : <code id="audioDir">…</code></p>
     <div class="row"><button class="ghost" id="pickDir">Choisir un dossier…</button><button class="ghost" id="openDir">Ouvrir le dossier</button><button class="ghost" id="checkDeps">Vérifier les outils (FFmpeg, Whisper…)</button></div><div id="install-status"></div></section>
-  <section class="card about"><h2>À propos</h2><div class="row" style="align-items:center;gap:14px"><img src="assets/bullo-player.png" alt="" width="56" height="56" style="border-radius:14px"><div><b>Bullo</b><br><span>${esc(ABOUT_CREDIT)}</span></div></div>
+  <section data-cat="about" class="card about"><h2>À propos</h2><div class="row" style="align-items:center;gap:14px"><img src="assets/bullo-player.png" alt="" width="56" height="56" style="border-radius:14px"><div><b>Bullo</b><br><span>${esc(ABOUT_CREDIT)}</span></div></div>
     <p>Bullo est né d’une idée simple : offrir un espace calme, inclusif et concret pour transformer un cours, une pensée ou un bruit de fond en prochaine action.</p>
     <p class="mute">Mentions légales : Bullo est un outil local de productivité. Les données restent sur l’appareil sauf action explicite de l’utilisateur. Aucune garantie médicale ou pédagogique.</p><p class="mute" id="ver">Version …</p>
     <div class="row"><button class="ghost" id="updBtn">Rechercher une mise à jour</button></div><p class="msg" id="updMsg" role="status"></p>
     ${chk("checkUpdates", "Vérifier les mises à jour au démarrage (une requête vers GitHub, au plus une fois par jour)")}</section>`;
 
+  // --- catégories : une seule à la fois, toutes les sections restent dans la page (les boutons continuent de fonctionner) ---
+  const showCat = c => {
+    if (!SET_CATS.some(([k]) => k === c)) c = "look"; setCat = c;
+    main.querySelectorAll("section[data-cat]").forEach(x => { x.hidden = x.dataset.cat !== c; });
+    main.querySelectorAll("[data-cat-tab]").forEach(t => { const on = t.dataset.catTab === c; t.setAttribute("aria-selected", String(on)); t.tabIndex = on ? 0 : -1; t.classList.toggle("on", on); });
+  };
+  main.querySelectorAll("[data-cat-tab]").forEach(t => {
+    t.onclick = () => showCat(t.dataset.catTab);
+    t.onkeydown = e => { const i = SET_CATS.findIndex(([k]) => k === t.dataset.catTab), d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0; if (!d) return; e.preventDefault(); const n = SET_CATS[(i + d + SET_CATS.length) % SET_CATS.length][0]; showCat(n); $("#st-" + n).focus(); };
+  });
+  showCat(setCat);
   // --- champs génériques ---
   const syncOut = el => { const o = $(`[data-o=${el.dataset.c}]`); if (!o) return; const k = el.dataset.c, v = cfg[k]; o.textContent = k === "size" ? v + " px" : k === "lh" ? (+v).toFixed(1) : k === "letter" ? v + " px" : k === "ttsRate" ? (+v).toFixed(1) + "×" : k === "bgVolume" ? Math.round(v * 100) + " %" : v; };
   main.querySelectorAll("[data-c]").forEach(el => {
@@ -1183,6 +1302,8 @@ function settings() {
   // --- Profil ---
   const pm = (t, err) => { const m = $("#pinMsg"); m.className = "msg" + (err ? " err" : ""); m.textContent = t; };
   $("#pinSave").onclick = async () => { const v = $("#pinNew").value; if (!/^\d{4,}$/.test(v)) return pm("Le code doit faire au moins 4 chiffres.", true); try { cfg.pin = await sha(v); applyCfg(); settings(); notice("Code enregistré."); } catch { pm("Impossible d’enregistrer le code sur ce système.", true); } };
+  main.querySelectorAll("[data-mod]").forEach(c => c.onchange = () => { cfg.mods = { ...cfg.mods, [c.dataset.mod]: c.checked }; applyCfg(); });
+  $("#redoWelcome").onclick = () => welcome(true);
   const pd = $("#pinDel"); if (pd) pd.onclick = () => { cfg.pin = ""; applyCfg(); settings(); notice("Code retiré."); };
   main.querySelectorAll("[data-delcourse]").forEach(b => b.onclick = () => { cfg.courses.splice(+b.dataset.delcourse, 1); applyCfg(); settings(); });
   // --- Enregistrements / outils ---
@@ -1274,6 +1395,7 @@ async function reminders() {
 }
 // Filet de sécurité : si le système bloque les notifications, Bullo affiche quand même le rappel à l’écran.
 async function pollReminders() {
+  if (!modOn("reminders")) return;
   try {
     const list = await invoke("list_reminders"), now = Date.now() / 1000;
     for (const r of list) if (!r.done && r.due <= now && !remState.shown.has(r.id)) { remState.shown.add(r.id); notice("⏰ " + r.title, false, 12000); }
@@ -1660,7 +1782,7 @@ function searchView() {
   });
   run();
 }
-ttsInit(); bgInit(); applyCfg(); pomWidget(); lock(); setTimeout(pollReminders, 1500); setTimeout(startupUpdateCheck, 4000);
+ttsInit(); bgInit(); applyCfg(); pomWidget(); lock(); if (!cfg.onboarded) welcome(); setTimeout(pollReminders, 1500); setTimeout(startupUpdateCheck, 4000);
 nav("home");
 // Si la police choisie n'est plus disponible, on le dit explicitement et on revient à la police par défaut.
 fontsReady = loadAppFonts().then(() => checkAllFonts());
