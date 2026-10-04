@@ -2,6 +2,15 @@
 
 Format : une section par version, la plus récente en haut.
 
+## 1.6.3 — 2026-10-04
+
+### Corrections
+- **Notifications** : sur le Mac testé, la notification « envoyée » par le plugin Tauri n'apparaissait pas du tout. Bullo utilise maintenant l'API actuelle de macOS (UserNotifications) : au premier envoi, macOS demande l'autorisation pour **Bullo**.
+- **Plus d'« Éditeur de script »** : si macOS refuse la notification, Bullo ne passe plus par osascript. Le son est joué, et la fenêtre de Bullo revient au premier plan avec le message du rappel.
+- **Son des notifications personnalisé** : Bullo joue `src-tauri/sounds/notification.wav` (ou .mp3, .m4a, .aiff) ; à défaut, le son « Glass » de macOS.
+- Le bouton « Tester la notification » est retiré (outil de diagnostic, inutile dans la version publique).
+- En `npm run tauri dev` (pas une vraie application), les notifications macOS ne sont pas disponibles : le test se fait avec l'application compilée.
+
 ## 1.6.2 — 2026-10-04
 
 ### Diagnostic des notifications

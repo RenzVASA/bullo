@@ -44,7 +44,7 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "
 const errText = x => (x && x.message) ? x.message : String(x);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const main = $("#main");
-const APP_VERSION = "1.6.2", ABOUT_CREDIT = "Vibe codé par Renz-VASA, avec un peu d’intelligence artificielle ✨";
+const APP_VERSION = "1.6.3", ABOUT_CREDIT = "Vibe codé par Renz-VASA, avec un peu d’intelligence artificielle ✨";
 
 // Clés de stockage locales (préfixe bullo_). Les anciennes clés de la version précédente sont migrées une seule fois, puis supprimées.
 const KEYS = { cfg: "bullo_cfg", tags: "bullo_tags", vers: "bullo_note_versions", draft: "bullo_draft", focus: "bullo_focus", pom: "bullo_pom_enabled", googleWhen: "bullo_google_when" };
@@ -1407,18 +1407,11 @@ async function reminders() {
   const row = r => `<div class="item" data-rid="${r.id}"><div class="t"><b>${esc(r.title)}</b> ${!r.done && r.due < now ? '<small class="rec">en retard</small>' : ""}<div class="mute">${esc(whenRem(r.due))}</div></div>
     ${r.done ? `<button class="ghost sm" data-ract="undo">Rétablir</button>` : `<button class="primary sm" data-ract="done">Fait</button><button class="ghost sm" data-ract="snooze">Reporter 10 min</button><button class="ghost sm" data-ract="edit">Modifier</button>`}<button class="ghost sm danger" data-ract="del" aria-label="Supprimer le rappel ${esc(r.title)}">Supprimer</button></div>`;
   main.innerHTML = `<h1>Rappels</h1><p class="mute lead">Les rappels te préviennent par une notification, même si Bullo est en arrière-plan.</p>
-  <div class="row"><button class="primary" id="newrem">+ Nouveau rappel</button><button class="ghost" id="newalarm">⏰ Alarme dans…</button><button class="ghost" id="testnotif">Tester la notification</button></div>
+  <div class="row"><button class="primary" id="newrem">+ Nouveau rappel</button><button class="ghost" id="newalarm">⏰ Alarme dans…</button></div>
   <div class="row chips" role="tablist" aria-label="Filtrer les rappels">${Object.entries(tabs).map(([k, l]) => `<button class="chip ${remState.tab === k ? "on" : ""}" role="tab" aria-selected="${remState.tab === k}" data-tab="${k}">${l} (${groups[k].length})</button>`).join("")}</div>
   <div class="card" id="remlist">${groups[remState.tab].length ? groups[remState.tab].map(row).join("") : `<p class="mute" style="margin:0">${remState.tab === "done" ? "Aucun rappel terminé." : "Rien à signaler ici."}</p>`}</div>`;
   $("#newrem").onclick = () => createReminder("", "");
   $("#newalarm").onclick = async () => { const r = await askForm("Alarme", [{ id: "title", label: "Nom de l’alarme", value: "Alarme" }, { id: "mins", label: "Dans combien de minutes ?", type: "number", value: "25" }]); if (!r) return; const m = Math.round(+r.mins); if (!(m > 0)) return notice("Indique un nombre de minutes supérieur à 0.", true); try { await invoke("add_reminder", { title: r.title.trim() || "Alarme", due: Math.floor(Date.now() / 1000) + m * 60 }); notice(`Alarme dans ${m} min.`); reminders(); } catch (er) { notice(errText(er), true); } };
-  $("#testnotif").onclick = async () => {
-    try {
-      const why = await invoke("notify", { title: "Bullo", body: "Les notifications fonctionnent." });
-      if (why) notice("La notification est passée par le secours de macOS (elle peut apparaître au nom de « Éditeur de script »). Motif : " + why, true, 12000);
-      else notice("Notification envoyée au nom de Bullo. Si rien n’apparaît : Réglages Système > Notifications > Bullo, et vérifie que le Mode Concentration est désactivé.", false, 9000);
-    } catch (er) { notice(errText(er), true); }
-  };
   main.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { remState.tab = b.dataset.tab; reminders(); });
   main.querySelectorAll("[data-rid]").forEach(el => el.querySelectorAll("[data-ract]").forEach(b => b.onclick = async () => {
     const id = +el.dataset.rid, r = L.find(x => x.id === id), a = b.dataset.ract;
@@ -1956,6 +1949,7 @@ function searchView() {
 // Actions venant de la barre de menus (enregistrer, note ajoutée depuis la petite fenêtre).
 if (window.__TAURI__?.event) {
   window.__TAURI__.event.listen("tray-rec", () => { if ($("#lock")) return notice("Déverrouille Bullo pour enregistrer.", true); toggleRec(); });
+  window.__TAURI__.event.listen("notify-fallback", ev => { const d = ev.payload || {}; notice((d.title ? d.title + " : " : "") + (d.body || ""), false, 12000); });
   window.__TAURI__.event.listen("items-changed", () => {
     const f = document.activeElement, typing = f && /^(TEXTAREA|INPUT)$/.test(f.tagName) && f.value;
     if (!typing && ["home", "inbox", "search"].includes(view)) nav(view); else notice("Une note vient d’être ajoutée dans l’Inbox.");

@@ -109,9 +109,9 @@ Avec **Ollama fermé** :
 - [ ] « Commencer » affiche « Cette fonctionnalité a besoin d'Ollama. Ouvre l'application Ollama, puis réessaie. », rien ne plante, ton texte est conservé.
 - [ ] Après avoir ouvert Ollama, « Commencer » fonctionne sans retaper.
 
-## 5 quindecies — Notifications (v1.6.1)
-- [ ] Application installée (pas `tauri dev`) : créer un rappel dans 1 minute. La notification porte le nom et l'icône de Bullo ; un clic ne lance plus l'Éditeur de script.
-- [ ] Réglages Système › Notifications : « Bullo » apparaît dans la liste.
+## 5 quindecies — Notifications (v1.6.1 à 1.6.3)
+- [ ] Application installée (pas `tauri dev`) : créer un rappel dans 1 minute. Le son de Bullo se joue ; si macOS demande l'autorisation pour Bullo, Autoriser. Sans notification macOS, la fenêtre de Bullo revient au premier plan avec le message. Jamais d'Éditeur de script.
+- [ ] Réglages Système › Notifications : « Bullo » apparaît dans la liste (s'il a pu être enregistré).
 - [ ] Fenêtre cachée (barre de menus), une réponse d'Explique-moi arrive : même notification.
 
 ## 5 quaterdecies — Barre de menus et Réviser (v1.6.0)

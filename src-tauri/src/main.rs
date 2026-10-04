@@ -446,20 +446,49 @@ struct Reminder { id: i64, title: String, due: i64, done: bool, notified: bool }
 
 fn now_secs() -> i64 { SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0) }
 
-// Notification système. On passe par le plugin officiel : la notification porte le nom et l'icône de Bullo, et un clic ramène Bullo.
-// (Avant, on passait par osascript, et macOS l'attribuait à « Éditeur de script » — un clic l'ouvrait.) osascript ne sert plus que de secours.
-// En `tauri dev`, macOS peut encore l'attribuer au Terminal : c'est normal, l'application installée utilise son propre nom.
-// Renvoie None si la notification est partie au nom de Bullo ; sinon le motif de l'échec (le secours osascript a alors été utilisé).
-fn notify_system(app: &AppHandle, title: &str, body: &str) -> Option<String> {
-    use tauri_plugin_notification::NotificationExt;
-    let why = match app.notification().builder().title(title).body(body).show() { Ok(_) => return None, Err(er) => er.to_string() };
+// Notification système. Sur macOS récent, les anciennes méthodes ne marchent plus : le plugin Tauri « réussit » sans rien afficher
+// (et Bullo n'apparaît même pas dans Réglages Système › Notifications), et osascript affiche tout au nom de « Éditeur de script ».
+// On utilise donc l'API actuelle de macOS (UserNotifications) : au premier envoi, macOS demande l'autorisation pour **Bullo**.
+// Elle exige que Bullo soit lancé comme application (.app) : en `tauri dev`, on tombe sur le secours osascript.
+#[cfg(target_os = "macos")]
+fn notify_native(title: &str, body: &str) -> Result<(), String> {
+    use mac_usernotifications::{blocking, Notification};
+    let exe = std::env::current_exe().map_err(e)?;
+    if !exe.to_string_lossy().contains(".app/Contents/MacOS") { return Err("Bullo n'est pas lancé comme une application installée (mode développement).".into()); }
+    // Première fois : macOS affiche la demande d'autorisation et on attend la réponse. Ensuite la réponse est immédiate (et suit Réglages Système).
+    match blocking::request_auth() {
+        Ok(true) => {}
+        Ok(false) => return Err("Notifications refusées pour Bullo : autorise-les dans Réglages Système › Notifications › Bullo.".into()),
+        Err(er) => return Err(format!("Autorisation impossible : {er}")),
+    }
+    match Notification::default().title(title).message(body).send_blocking() { Ok(_) => Ok(()), Err(er) => Err(er.to_string()) }
+}
+
+// Son des notifications : `sounds/notification.(mp3|m4a|aiff|wav)` livré avec l'application ; à défaut, le son « Glass » de macOS.
+fn play_notif_sound(app: &AppHandle) {
     #[cfg(target_os = "macos")]
     {
-        let esc = |t: &str| t.replace('\\', "\\\\").replace('"', "\\\"");
-        let script = format!("display notification \"{}\" with title \"{}\" sound name \"Glass\"", esc(body), esc(title));
-        let _ = Command::new("osascript").args(["-e", script.as_str()]).output();
+        let custom = app.path().resource_dir().ok().map(|d| d.join("sounds")).and_then(|d| ["mp3", "m4a", "aiff", "wav"].iter().map(|x| d.join(format!("notification.{x}"))).find(|p| p.exists()));
+        let path = custom.unwrap_or_else(|| std::path::PathBuf::from("/System/Library/Sounds/Glass.aiff"));
+        let _ = Command::new("afplay").arg(path).spawn();
     }
-    Some(why)
+    #[cfg(not(target_os = "macos"))]
+    { let _ = app; }
+}
+
+// Renvoie None si la notification est partie au nom de Bullo ; sinon le motif de l'échec. Dans ce cas on n'utilise plus osascript (qui affichait
+// « Éditeur de script ») : le son est joué, la fenêtre de Bullo revient au premier plan et affiche le message.
+fn notify_system(app: &AppHandle, title: &str, body: &str) -> Option<String> {
+    play_notif_sound(app);
+    #[cfg(target_os = "macos")]
+    {
+        let why = match notify_native(title, body) { Ok(()) => return None, Err(er) => er };
+        if let Some(w) = app.get_webview_window("main") { if !w.is_visible().unwrap_or(true) || w.is_minimized().unwrap_or(false) { show_main(app); } }
+        let _ = app.emit("notify-fallback", serde_json::json!({ "title": title, "body": body }));
+        return Some(why);
+    }
+    #[cfg(not(target_os = "macos"))]
+    { let _ = (app, title, body); Some("Notifications non prises en charge sur ce système.".to_string()) }
 }
 
 // Renvoie "" si tout va bien, sinon le motif pour lequel macOS a utilisé le secours (visible avec « Tester la notification »).
@@ -1519,7 +1548,6 @@ fn save_course(app: AppHandle, course: String, title: String, md: String, audio:
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
             fs::create_dir_all(&dir)?;

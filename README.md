@@ -93,7 +93,7 @@ Sans ce fichier, Bullo utilise son logo vectoriel `src/bullo-logo.svg` (pas de �
 
 ### 4. Première utilisation
 1. Autorise le **micro** quand macOS le demande.
-2. **Rappels** : clique sur « Tester la notification ». Si rien n'apparaît : Réglages Système > Notifications > « Éditeur de script » > Autoriser. (Les notifications passent par `osascript`, sans dépendance.)
+2. **Rappels** : crée un rappel dans une minute. Un son se joue à l'échéance ; si macOS le propose, autorise les notifications pour **Bullo** (Réglages Système > Notifications > Bullo).
 3. Réglages > Enregistrements et outils > « Vérifier les outils » : FFmpeg, Whisper et le modèle doivent être « Installé ».
 4. Lecture vocale : si aucune voix française n'est détectée, Réglages Système > Accessibilité > Contenu énoncé > Voix système.
 

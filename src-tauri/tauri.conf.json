@@ -1,6 +1,6 @@
 {
   "productName": "Bullo",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "identifier": "app.bullo.desktop",
   "build": {
     "frontendDist": "../src"
@@ -32,7 +32,8 @@
       "icons/icon.ico",
       "icons/icon.png"
     ],
-    "createUpdaterArtifacts": true
+    "createUpdaterArtifacts": true,
+    "resources": ["sounds/*"]
   },
   "plugins": {
     "updater": {
