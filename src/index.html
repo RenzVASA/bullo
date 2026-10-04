@@ -44,7 +44,7 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "
 const errText = x => (x && x.message) ? x.message : String(x);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const main = $("#main");
-const APP_VERSION = "1.6.1", ABOUT_CREDIT = "Vibe codé par Renz-VASA, avec un peu d’intelligence artificielle ✨";
+const APP_VERSION = "1.6.2", ABOUT_CREDIT = "Vibe codé par Renz-VASA, avec un peu d’intelligence artificielle ✨";
 
 // Clés de stockage locales (préfixe bullo_). Les anciennes clés de la version précédente sont migrées une seule fois, puis supprimées.
 const KEYS = { cfg: "bullo_cfg", tags: "bullo_tags", vers: "bullo_note_versions", draft: "bullo_draft", focus: "bullo_focus", pom: "bullo_pom_enabled", googleWhen: "bullo_google_when" };
@@ -1412,7 +1412,13 @@ async function reminders() {
   <div class="card" id="remlist">${groups[remState.tab].length ? groups[remState.tab].map(row).join("") : `<p class="mute" style="margin:0">${remState.tab === "done" ? "Aucun rappel terminé." : "Rien à signaler ici."}</p>`}</div>`;
   $("#newrem").onclick = () => createReminder("", "");
   $("#newalarm").onclick = async () => { const r = await askForm("Alarme", [{ id: "title", label: "Nom de l’alarme", value: "Alarme" }, { id: "mins", label: "Dans combien de minutes ?", type: "number", value: "25" }]); if (!r) return; const m = Math.round(+r.mins); if (!(m > 0)) return notice("Indique un nombre de minutes supérieur à 0.", true); try { await invoke("add_reminder", { title: r.title.trim() || "Alarme", due: Math.floor(Date.now() / 1000) + m * 60 }); notice(`Alarme dans ${m} min.`); reminders(); } catch (er) { notice(errText(er), true); } };
-  $("#testnotif").onclick = async () => { try { await invoke("notify", { title: "Bullo", body: "Les notifications fonctionnent." }); notice("Notification envoyée. Si rien n’apparaît : Réglages Système > Notifications, autorise « Éditeur de script »."); } catch (er) { notice(errText(er), true); } };
+  $("#testnotif").onclick = async () => {
+    try {
+      const why = await invoke("notify", { title: "Bullo", body: "Les notifications fonctionnent." });
+      if (why) notice("La notification est passée par le secours de macOS (elle peut apparaître au nom de « Éditeur de script »). Motif : " + why, true, 12000);
+      else notice("Notification envoyée au nom de Bullo. Si rien n’apparaît : Réglages Système > Notifications > Bullo, et vérifie que le Mode Concentration est désactivé.", false, 9000);
+    } catch (er) { notice(errText(er), true); }
+  };
   main.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { remState.tab = b.dataset.tab; reminders(); });
   main.querySelectorAll("[data-rid]").forEach(el => el.querySelectorAll("[data-ract]").forEach(b => b.onclick = async () => {
     const id = +el.dataset.rid, r = L.find(x => x.id === id), a = b.dataset.ract;

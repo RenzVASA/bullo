@@ -449,20 +449,23 @@ fn now_secs() -> i64 { SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as
 // Notification système. On passe par le plugin officiel : la notification porte le nom et l'icône de Bullo, et un clic ramène Bullo.
 // (Avant, on passait par osascript, et macOS l'attribuait à « Éditeur de script » — un clic l'ouvrait.) osascript ne sert plus que de secours.
 // En `tauri dev`, macOS peut encore l'attribuer au Terminal : c'est normal, l'application installée utilise son propre nom.
-fn notify_system(app: &AppHandle, title: &str, body: &str) {
+// Renvoie None si la notification est partie au nom de Bullo ; sinon le motif de l'échec (le secours osascript a alors été utilisé).
+fn notify_system(app: &AppHandle, title: &str, body: &str) -> Option<String> {
     use tauri_plugin_notification::NotificationExt;
-    if app.notification().builder().title(title).body(body).show().is_ok() { return; }
+    let why = match app.notification().builder().title(title).body(body).show() { Ok(_) => return None, Err(er) => er.to_string() };
     #[cfg(target_os = "macos")]
     {
         let esc = |t: &str| t.replace('\\', "\\\\").replace('"', "\\\"");
         let script = format!("display notification \"{}\" with title \"{}\" sound name \"Glass\"", esc(body), esc(title));
         let _ = Command::new("osascript").args(["-e", script.as_str()]).output();
     }
+    Some(why)
 }
 
+// Renvoie "" si tout va bien, sinon le motif pour lequel macOS a utilisé le secours (visible avec « Tester la notification »).
 #[tauri::command]
-async fn notify(app: AppHandle, title: String, body: String) -> Result<(), String> {
-    tauri::async_runtime::spawn_blocking(move || notify_system(&app, &title, &body)).await.map_err(e)
+async fn notify(app: AppHandle, title: String, body: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || notify_system(&app, &title, &body).unwrap_or_default()).await.map_err(e)
 }
 
 #[tauri::command]

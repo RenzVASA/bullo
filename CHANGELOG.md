@@ -2,6 +2,12 @@
 
 Format : une section par version, la plus récente en haut.
 
+## 1.6.2 — 2026-10-04
+
+### Diagnostic des notifications
+- Le bouton « Tester la notification » (Rappels) dit maintenant **par quel chemin** la notification est partie : au nom de Bullo, ou par le secours de macOS (qui l'affiche au nom de « Éditeur de script »), avec le **motif** de l'échec dans ce cas. Ce motif permettra de corriger pour de bon.
+- Ancien texte d'aide (« autorise Éditeur de script ») retiré.
+
 ## 1.6.1 — 2026-10-04
 
 ### Corrections
