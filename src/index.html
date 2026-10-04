@@ -44,7 +44,7 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "
 const errText = x => (x && x.message) ? x.message : String(x);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const main = $("#main");
-const APP_VERSION = "1.6.3", ABOUT_CREDIT = "Vibe codé par Renz-VASA, avec un peu d’intelligence artificielle ✨";
+const APP_VERSION = "1.7.0", ABOUT_CREDIT = "Vibe codé par Renz-VASA, avec un peu d’intelligence artificielle ✨";
 
 // Clés de stockage locales (préfixe bullo_). Les anciennes clés de la version précédente sont migrées une seule fois, puis supprimées.
 const KEYS = { cfg: "bullo_cfg", tags: "bullo_tags", vers: "bullo_note_versions", draft: "bullo_draft", focus: "bullo_focus", pom: "bullo_pom_enabled", googleWhen: "bullo_google_when" };
@@ -211,7 +211,7 @@ const pomTotal = () => (pom.phase === "work" ? clamp(+cfg.pomodoro || 25, 1, 120
 const pomLeft = () => pom.running ? Math.max(0, pom.end - Date.now()) : (pom.left ?? pomTotal());
 function pomTick() {
   const el = $("#pom-time"); if (!el) return;
-  if (pom.running && Date.now() >= pom.end) { const was = pom.phase; pom.running = false; pom.left = null; pom.phase = was === "work" ? "break" : "work"; if (was === "work") setTimeout(exBanner, 300); notice(was === "work" ? "Pomodoro terminé : place à la pause !" : "Pause terminée : on reprend quand tu veux.", false, 8000); }
+  if (pom.running && Date.now() >= pom.end) { const was = pom.phase; pom.running = false; pom.left = null; pom.phase = was === "work" ? "break" : "work"; if (was === "work") setTimeout(() => { exBanner(); cardsBanner(); }, 300); notice(was === "work" ? "Pomodoro terminé : place à la pause !" : "Pause terminée : on reprend quand tu veux.", false, 8000); }
   el.textContent = fmt(Math.ceil(pomLeft() / 1000)); $("#pom-phase").textContent = pom.phase === "work" ? "Travail" : "Pause";
   $("#pom-start").disabled = pom.running; $("#pom-pause").disabled = !pom.running;
 }
@@ -271,6 +271,7 @@ const ICON = {
   decomposer: '<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
   bloque: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/>',
   consigne: '<rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>',
+  mac: '<rect width="18" height="12" x="3" y="4" rx="2"/><path d="M2 20h20"/><path d="M8 16v4"/><path d="M16 16v4"/>',
   reviser: '<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>',
   import: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
   tx: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h6"/>',
@@ -801,7 +802,7 @@ const PRESETS = { essential: [], student: ["reminders", "search", "tools", "expl
 const DEF = {
   mods: Object.fromEntries(MOD_IDS.map(i => [i, true])), onboarded: false, pinHint: "",
   font: "body", size: 18, lh: 1.6, letter: 0, theme: "auto", accent: "#5b4bf5", contrast: false, colorblind: "none", soft: false, reduceMotion: false, mask: false,
-  name: "", pin: "", courses: [], hidePlayer: false, pomodoro: 25, breakMinutes: 5, ttsRate: 1, ttsVoice: "", singleTask: false, lite: false, keepInMenuBar: true, idleMinutes: 5,
+  name: "", pin: "", courses: [], hidePlayer: false, pomodoro: 25, breakMinutes: 5, ttsRate: 1, ttsVoice: "", singleTask: false, lite: false, keepInMenuBar: true, idleMinutes: 5, globalShortcut: true, notifSound: true, cardsRemind: true, cardsHour: 18, reviseMode: "cards",
   shortcuts: { search: "Ctrl+K", capture: "Ctrl+Shift+R", read: "Alt+L", park: "Ctrl+Shift+P" }, breakEvery: 0,
   googleAuto: false, bgShuffle: false, bgFavOnly: false, bgSource: "bullo", extPref: "Music", extVolume: .7, bgSound: "rain", bgVolume: .5, bgBar: true, bgCollapsed: false, bgPauseOnRec: true, checkUpdates: true
 };
@@ -824,7 +825,8 @@ function sanitizeCfg(c) {
   if (!Array.isArray(o.courses)) o.courses = [];
   o.shortcuts = { ...DEF.shortcuts, ...(o.shortcuts && typeof o.shortcuts === "object" ? o.shortcuts : {}) };
   o.mods = Object.fromEntries(MOD_IDS.map(i => [i, !(o.mods && typeof o.mods === "object") || o.mods[i] !== false]));
-  o.lite = o.lite === true; o.keepInMenuBar = o.keepInMenuBar !== false; o.onboarded = o.onboarded === true; o.pinHint = String(o.pinHint || "").slice(0, 80);
+  o.lite = o.lite === true; o.keepInMenuBar = o.keepInMenuBar !== false; o.globalShortcut = o.globalShortcut !== false; o.notifSound = o.notifSound !== false; o.cardsRemind = o.cardsRemind !== false;
+  { const h = o.cardsHour == null || String(o.cardsHour).trim() === "" ? NaN : Math.round(Number(o.cardsHour)); o.cardsHour = Number.isFinite(h) ? clamp(h, 0, 23) : DEF.cardsHour; } if (!["cards", "quiz"].includes(o.reviseMode)) o.reviseMode = "cards"; o.onboarded = o.onboarded === true; o.pinHint = String(o.pinHint || "").slice(0, 80);
   delete o.fontSize; delete o.pomEnabled;
   return o;
 }
@@ -890,6 +892,17 @@ const PALETTES = { // palettes sûres (Okabe-Ito) : on ne se fie jamais à la se
 const lum = hex => { const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; };
 const isDark = () => cfg.theme === "dark" || (cfg.theme === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
 const saveCfg = () => { try { localStorage.setItem(KEYS.cfg, JSON.stringify(cfg)); } catch {} };
+// Réglages que le Rust doit connaître pour agir tout seul (son, rappel quotidien des cartes, fuseau horaire) et raccourci global ⌥⌘N.
+let shortcutApplied = null, shortcutErr = "";
+function sendPrefs() {
+  const t = window.__TAURI__?.core; if (!t) return;
+  t.invoke("prefs_set", { sound: cfg.notifSound, cardsOn: cfg.cardsRemind && modOn("revise"), cardsHour: +cfg.cardsHour, tzEastMin: -new Date().getTimezoneOffset() }).catch(() => {});
+  if (shortcutApplied !== cfg.globalShortcut) {
+    const want = cfg.globalShortcut; shortcutApplied = want;
+    t.invoke("shortcut_set", { on: want }).then(() => { shortcutErr = ""; }).catch(er => { shortcutErr = want ? errText(er) : ""; if (want) notice(shortcutErr, true, 9000); });
+  }
+}
+setInterval(() => { try { sendPrefs(); } catch {} }, 1800000); // change d’heure d’été / d’hiver pendant que Bullo reste ouvert
 function applyCfg() {
   const R = document.documentElement, r = R.style;
   r.setProperty("--fs", cfg.size + "px"); r.setProperty("--lh", cfg.lh); r.setProperty("--letter", cfg.letter + "px");
@@ -901,7 +914,7 @@ function applyCfg() {
   if (pal) [acc, acc2, rec] = pal[isDark() ? "dark" : "light"]; else if (custom && !cfg.contrast) acc = cfg.accent;
   for (const [k, v] of [["--accent", acc], ["--accent2", acc2], ["--rec", rec], ["--on", acc ? (lum(acc) > .4 ? "#0d1017" : "#ffffff") : null]]) v ? r.setProperty(k, v) : r.removeProperty(k);
   document.querySelectorAll("nav [data-v]").forEach(b => { b.hidden = !modOn(b.dataset.v); });
-  if (window.__TAURI__?.core) window.__TAURI__.core.invoke("tray_config", { keep: cfg.keepInMenuBar }).catch(() => {});
+  if (window.__TAURI__?.core) { window.__TAURI__.core.invoke("tray_config", { keep: cfg.keepInMenuBar }).catch(() => {}); sendPrefs(); }
   document.body.classList.toggle("lite", cfg.lite); const lb = $("#liteBtn"); if (lb) lb.setAttribute("aria-pressed", String(cfg.lite));
   saveCfg(); bgUi?.();
 }
@@ -1173,7 +1186,7 @@ function gWizard(i) {
   (q("input") || q("#gwOpen") || q("#gwNext") || q("#gwConn"))?.focus();
 }
 let gConnecting = false;
-const SET_CATS = [["look", "Apparence"], ["comfort", "Confort"], ["audio", "Audio"], ["data", "Données"], ["profile", "Profil"], ["about", "À propos"]];
+const SET_CATS = [["look", "Apparence"], ["comfort", "Confort"], ["mac", "Sur ton Mac"], ["audio", "Audio"], ["data", "Données"], ["profile", "Profil"], ["about", "À propos"]];
 let setCat = "look";
 function settings() {
   const opt = (v, l, cur) => `<option value="${esc(v)}" ${String(cur) === String(v) ? "selected" : ""}>${esc(l)}</option>`;
@@ -1215,10 +1228,20 @@ function settings() {
     <div class="row"><button class="ghost" id="diag">Lancer le diagnostic</button><button class="ghost" id="diagKey">Tester la touche lecture/pause</button></div>
     <pre id="diagOut" class="diag" hidden></pre><div class="row"><button class="ghost sm" id="diagCopy" hidden>Copier le résultat</button></div><p class="msg" id="diagMsg" role="status"></p></section>
   <section data-cat="audio" class="card" id="favCard">${favsHtml()}</section>
-  <section data-cat="comfort" class="card"><h2>Confort et concentration</h2>${chk("lite", "Mode épuré : menu en icônes, sans textes d’aide, sans lecteur de sons ni bandeaux (aussi dans le menu)")}${chk("keepInMenuBar", "Garder Bullo dans la barre de menus du Mac quand je ferme la fenêtre (icône en haut : enregistrer, note rapide, pensée)")}${chk("singleTask", "Mode une seule tâche (Accueil)")}${chk("hidePlayer", "Masquer le lecteur audio dans les cours")}
+  <section data-cat="mac" class="card"><h2>Barre de menus et raccourci</h2>
+    <p class="mute">Bullo peut rester discret en haut de l’écran et s’ouvrir d’un geste, sans que tu cherches la fenêtre.</p>
+    ${chk("keepInMenuBar", "Garder Bullo dans la barre de menus quand je ferme la fenêtre")}<p class="hint">L’icône en haut permet d’enregistrer, de prendre une note rapide ou de poser une pensée. Pour quitter vraiment : « Quitter Bullo » dans ce menu.</p>
+    ${chk("globalShortcut", "Raccourci ⌥⌘N : note rapide depuis n’importe quelle application")}<p class="hint">Option + Commande + N ouvre une petite fenêtre pour écrire une idée sans quitter ce que tu fais.</p>${shortcutErr && cfg.globalShortcut ? `<p class="msg err" role="alert">${esc(shortcutErr)}</p>` : ""}</section>
+  <section data-cat="mac" class="card"><h2>Notifications et sons</h2>
+    <p class="mute">Ce que Bullo fait quand un rappel arrive ou qu’il est temps de réviser.</p>
+    ${chk("notifSound", "Jouer le petit son de Bullo avec les notifications")}<p class="hint">Si tu l’enlèves, les notifications restent visibles mais silencieuses.</p>
+    ${chk("cardsRemind", "Me rappeler chaque jour de réviser mes cartes")}<p class="hint">Une seule notification par jour, seulement s’il y a des cartes à revoir. Nécessite la page Réviser.</p>
+    <label>Heure du rappel<select data-c="cardsHour" ${cfg.cardsRemind ? "" : "disabled"}>${Array.from({ length: 24 }, (_, h) => opt(h, h + " h", cfg.cardsHour)).join("")}</select></label></section>
+  <section data-cat="comfort" class="card"><h2>Confort et concentration</h2><p class="mute">Réduire ce qui est affiché pour mieux se concentrer.</p>${chk("lite", "Mode épuré : menu en icônes, sans textes d’aide, sans lecteur de sons ni bandeaux (aussi dans le menu)")}${chk("singleTask", "Mode une seule tâche (Accueil)")}${chk("hidePlayer", "Masquer le lecteur audio dans les cours")}
     <label>Rappel d’inactivité (minutes, 0 = désactivé)<input type="number" min="0" max="120" data-c="idleMinutes" value="${cfg.idleMinutes}"></label></section>
-  <section data-cat="profile" class="card"><h2>Ce que j’affiche</h2>
+  <section data-cat="profile" class="card"><h2>Modules : ce que j’affiche</h2>
     <p class="mute">Accueil, Capturer, Inbox et Réglages restent toujours là. Le reste, tu le montres ou tu le caches : rien n’est supprimé, tes données sont conservées.</p>
+    <div class="row" role="group" aria-label="Préréglages de modules"><button class="ghost sm" data-modpre="essential">Essentiel</button><button class="ghost sm" data-modpre="student">Étudiant</button><button class="ghost sm" data-modpre="all">Tout afficher</button></div>
     <div class="mods">${MODS.map(([id, l, d]) => `<label class="chk mod"><input type="checkbox" data-mod="${id}" ${modOn(id) ? "checked" : ""}> <span><b>${esc(l)}</b><small class="mute">${esc(d)}</small></span></label>`).join("")}</div>
     <div class="row"><button class="ghost" id="redoWelcome">Refaire la présentation</button></div>
     <h2>Profil et confidentialité</h2><label>Prénom<input data-c="name" value="${esc(cfg.name)}" maxlength="40"></label>
@@ -1255,7 +1278,9 @@ function settings() {
       else if (el.type === "range" || el.type === "number") { v = parseFloat(el.value); if (!Number.isFinite(v)) return; v = clamp(v, +el.min, +el.max); }
       else v = el.value;
       if (k === "bgSource") { bgSetSource(v); return; }
+      if (k === "cardsHour") v = clamp(Math.round(+v) || 0, 0, 23);
       cfg[k] = v; syncOut(el); applyCfg();
+      if (k === "cardsRemind") { const h = $("[data-c=cardsHour]"); if (h) h.disabled = !v; }
       if (k === "bgVolume") bgSetVolume(); if (k === "bgSound") { if (bg.playing) bgPlay(); } if (k === "bgBar") bgUi();
       if (k === "font") fontReport();
       if (k === "size" || k === "lh" || k === "letter") fontReport(true);
@@ -1335,6 +1360,7 @@ function settings() {
   // --- Profil ---
   const pm = (t, err) => { const m = $("#pinMsg"); m.className = "msg" + (err ? " err" : ""); m.textContent = t; };
   $("#pinSave").onclick = async () => { const v = $("#pinNew").value; if (!/^\d{4,}$/.test(v)) return pm("Le code doit faire au moins 4 chiffres.", true); try { cfg.pin = await sha(v); applyCfg(); settings(); notice("Code enregistré."); } catch { pm("Impossible d’enregistrer le code sur ce système.", true); } };
+  main.querySelectorAll("[data-modpre]").forEach(b => b.onclick = () => { const on = PRESETS[b.dataset.modpre]; cfg.mods = Object.fromEntries(MOD_IDS.map(i => [i, on.includes(i)])); applyCfg(); settings(); notice("Modules mis à jour."); });
   main.querySelectorAll("[data-mod]").forEach(c => c.onchange = () => { cfg.mods = { ...cfg.mods, [c.dataset.mod]: c.checked }; applyCfg(); });
   $("#redoWelcome").onclick = () => welcome(true);
   const pd = $("#pinDel"); if (pd) pd.onclick = () => { cfg.pin = ""; applyCfg(); settings(); notice("Code retiré."); };
@@ -1795,6 +1821,24 @@ const rvNorm = raw => {
   });
   return out;
 };
+// Quiz sans IA : les mauvais choix sont les réponses d’autres cartes (du même cours en priorité), toutes différentes.
+const rvKey = x => String(x == null ? "" : x).trim().toLowerCase();
+const rvShuffle = (a, rnd = Math.random) => { const x = a.slice(); for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; } return x; };
+function rvQuiz(card, pool, rnd = Math.random) {
+  const seen = new Set([rvKey(card.back)]), same = [], other = [];
+  const mix = rvShuffle(pool || [], rnd).filter(c => c && c.id !== card.id);
+  // Deux passes : les réponses du même cours passent avant les autres, même si une autre carte a la même réponse.
+  [true, false].forEach(sameCourse => mix.forEach(c => {
+    if (((c.course || "") === (card.course || "")) !== sameCourse) return;
+    const k = rvKey(c.back); if (!k || seen.has(k)) return;
+    seen.add(k); (sameCourse ? same : other).push(c.back);
+  }));
+  const wrong = same.concat(other).slice(0, 3);
+  if (wrong.length < 3 || !rvKey(card.back)) return null;
+  const options = rvShuffle([card.back, ...wrong], rnd);
+  return { options, correct: options.indexOf(card.back) };
+}
+const rvQuizOk = cards => new Set((cards || []).map(c => rvKey(c.back)).filter(Boolean)).size >= 4;
 const rvIsDue = (c, now = Date.now() / 1000) => c.due <= now;
 const rvNext = (cards, now = Date.now() / 1000) => {
   const f = cards.filter(c => c.due > now).map(c => c.due).sort((a, b) => a - b)[0];
@@ -1814,24 +1858,40 @@ async function rvFromItem(id) {
   } catch (er) { notice(errText(er), true); }
 }
 document.addEventListener("click", ev => { const b = ev.target.closest && ev.target.closest("[data-rev]"); if (b) rvFromItem(+b.dataset.rev); });
-function rvStart() {
-  const due = (rv.list || []).filter(c => rvIsDue(c)).sort((a, b) => a.level - b.level || a.due - b.due).slice(0, RV_SESSION);
+function rvStart(size = RV_SESSION, render = true) {
+  const due = (rv.list || []).filter(c => rvIsDue(c)).sort((a, b) => a.level - b.level || a.due - b.due).slice(0, size);
   if (!due.length) return;
-  Object.assign(rv, { queue: due.map(c => ({ ...c, retried: false })), idx: 0, shown: false, session: true, stats: { n: 0, ok: 0 }, err: "" });
-  reviseView();
+  const mode = cfg.reviseMode === "quiz" && rvQuizOk(rv.list) ? "quiz" : "cards", pool = (rv.list || []).slice();
+  Object.assign(rv, { mode, pool, pick: null, queue: due.map(c => ({ ...c, retried: false, quiz: mode === "quiz" ? rvQuiz(c, pool) : null })), idx: 0, shown: false, session: true, stats: { n: 0, ok: 0 }, err: "", finished: null });
+  if (render) reviseView();
+}
+// Enregistre la réponse (la carte ratée revient une fois dans la séance, avec de nouveaux choix en mode quiz).
+async function rvRecord(c, ok) {
+  await invoke("cards_review", { id: c.id, ok });
+  rv.stats.n++; if (ok) rv.stats.ok++;
+  if (!ok && !c.retried) rv.queue.push({ ...c, retried: true, quiz: rv.mode === "quiz" ? rvQuiz(c, rv.pool) : null });
+}
+function rvAdvance() {
+  rv.idx++; rv.shown = false; rv.pick = null; rv.err = "";
+  if (rv.idx >= rv.queue.length) { rv.session = false; rv.list = null; rv.finished = rv.stats; }
 }
 async function rvAnswer(ok) {
   const c = rv.queue[rv.idx]; if (!c || rv.busy) return;
   rv.busy = "save";
-  try {
-    await invoke("cards_review", { id: c.id, ok });
-    rv.stats.n++; if (ok) rv.stats.ok++;
-    if (!ok && !c.retried) rv.queue.push({ ...c, retried: true });
-    rv.idx++; rv.shown = false; rv.err = "";
-    if (rv.idx >= rv.queue.length) { rv.session = false; rv.list = null; rv.finished = rv.stats; }
-  } catch (er) { rv.err = errText(er); }
+  try { await rvRecord(c, ok); rvAdvance(); } catch (er) { rv.err = errText(er); }
   rv.busy = ""; reviseView();
 }
+async function rvChoose(i) {
+  const c = rv.queue[rv.idx]; if (!c || !c.quiz || rv.busy || rv.pick != null || !(i >= 0 && i < c.quiz.options.length)) return;
+  rv.busy = "save";
+  try { await rvRecord(c, i === c.quiz.correct); rv.pick = i; rv.err = ""; } catch (er) { rv.err = errText(er); }
+  rv.busy = ""; await reviseView(); const b = $("#rvNext"); if (b) b.focus();
+}
+document.addEventListener("keydown", ev => {
+  if (view !== "revise" || !rv.session || rv.pick != null || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+  if (ev.target && /^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName)) return;
+  if (/^[1-4]$/.test(ev.key)) rvChoose(+ev.key - 1);
+});
 async function rvGenerate() {
   const text = rv.text.trim();
   if (text.length < 80) { rv.err = "Choisis un cours ou colle un texte un peu plus long."; return reviseView(); }
@@ -1858,10 +1918,20 @@ async function reviseView() {
   if (!rv.list && !rv.session) { try { rv.list = await invoke("cards_list"); } catch (er) { rv.list = []; rv.err = errText(er); } if (view !== "revise") return; }
   if (rv.page === "make" && !rv.srcs) { try { rv.srcs = (await invoke("list_items", { kind: null })).filter(i => ["cours", "reunion", "note"].includes(i.kind) && rvText(i).trim().length >= 80); } catch { rv.srcs = []; } if (view !== "revise") return; }
   const list = rv.list || [], now = Date.now() / 1000, due = list.filter(c => rvIsDue(c, now)), err = rv.err ? `<p class="msg err" role="alert">${esc(rv.err)}</p>` : "";
+  const quizOk = rvQuizOk(list), mode = quizOk && cfg.reviseMode === "quiz" ? "quiz" : "cards";
   const tabs = rv.session ? "" : `<div class="row ex-tabs" role="group" aria-label="Pages de Réviser">${[["today", "À revoir"], ["make", "Créer des cartes"], ["all", "Mes cartes"]].map(([k, l]) => `<button class="chip ${rv.page === k ? "on" : ""}" data-rpg="${k}" aria-pressed="${rv.page === k}">${l}</button>`).join("")}</div>`;
   let body = "";
   if (rv.session) {
     const c = rv.queue[rv.idx];
+    const qz = rv.mode === "quiz" && c.quiz;
+    if (qz) {
+      const q = c.quiz, done = rv.pick != null, good = done && rv.pick === q.correct, last = rv.idx + 1 >= rv.queue.length;
+      body = `<p class="mute lead" role="status">Question ${rv.idx + 1} sur ${rv.queue.length}</p>
+      <div class="card ex-card"><p class="mute" style="margin:0">${esc(c.course || "")}</p><p class="ex-q" id="rvQ">${esc(c.front)}</p>
+      <div class="rv-opts" role="group" aria-label="Choisis la bonne réponse (touches 1 à 4)">${q.options.map((o, i) => `<button type="button" class="rv-opt ${done && i === q.correct ? "good" : done && i === rv.pick ? "bad" : ""}" data-qo="${i}" ${done || rv.busy ? "disabled" : ""}><b>${i + 1}</b><span>${esc(o)}${done && i === q.correct ? " ✅ Bonne réponse" : done && i === rv.pick ? " ❌ Ton choix" : ""}</span></button>`).join("")}</div>
+      ${done ? `<p class="msg ${good ? "" : "err"}" role="status">${good ? "Bravo, c’est la bonne réponse !" : "Pas tout à fait : la bonne réponse est marquée ✅. Cette carte reviendra bientôt."}</p>` : ""}${err}
+      <div class="row">${done ? `<button class="primary" id="rvNext">${last ? "Terminer" : "Question suivante"}</button>` : ""}<button class="ghost sm" id="rvHear">🔊 Écouter</button><button class="ghost" id="rvStop" style="margin-left:auto">Arrêter</button></div></div>`;
+    } else
     body = `<p class="mute lead" role="status">Carte ${rv.idx + 1} sur ${rv.queue.length}</p>
       <div class="card ex-card" aria-live="polite"><p class="mute" style="margin:0">${esc(c.course || "")}</p><p class="ex-q" id="rvQ">${esc(c.front)}</p>
       ${rv.shown ? `<hr><p class="ex-q" id="rvA">${esc(c.back)}</p>` : ""}
@@ -1886,6 +1956,7 @@ async function reviseView() {
     const fin = rv.finished;
     body = (fin ? `<div class="card" role="status"><h2 style="margin-top:0">Séance terminée 🎉</h2><p>${fin.ok} carte${fin.ok > 1 ? "s" : ""} sue${fin.ok > 1 ? "s" : ""} sur ${fin.n}. Les cartes ratées reviennent plus vite.</p>${rvNext(list, now) ? `<p class="mute">Prochaine carte à revoir : ${rvNext(list, now)}.</p>` : ""}</div>` : "")
       + (list.length ? `<div class="card"><h2 style="margin-top:0">${due.length ? `${due.length} carte${due.length > 1 ? "s" : ""} à revoir` : "Rien à revoir pour l’instant"}</h2><p class="mute">${due.length ? `Séances courtes : ${Math.min(due.length, RV_SESSION)} cartes à la fois.` : (rvNext(list, now) ? `Prochaine carte ${rvNext(list, now)}.` : "")} ${list.length} carte${list.length > 1 ? "s" : ""} en tout.</p>${err}
+        ${due.length ? `<div class="row ex-tabs" role="group" aria-label="Façon de réviser"><button class="chip ${mode === "cards" ? "on" : ""}" data-rmode="cards" aria-pressed="${mode === "cards"}">Cartes à retourner</button><button class="chip ${mode === "quiz" ? "on" : ""}" data-rmode="quiz" aria-pressed="${mode === "quiz"}" ${quizOk ? "" : "disabled"}>Quiz à 4 choix</button></div>${quizOk ? "" : `<p class="mute">Le quiz demande au moins 4 cartes avec des réponses différentes.</p>`}` : ""}
         <div class="row">${due.length ? `<button class="primary" id="rvGo">Commencer (${Math.min(due.length, RV_SESSION)} cartes)</button>` : ""}</div></div>`
         : `<div class="card"><h2 style="margin-top:0">Tes cartes de révision</h2><p class="mute">Bullo transforme un cours en questions-réponses, puis te les repose juste avant que tu les oublies. Commence par créer quelques cartes.</p>${err}<div class="row"><button class="primary" id="rvNew">Créer des cartes</button></div></div>`);
   }
@@ -1896,7 +1967,10 @@ async function reviseView() {
     reviseView();
   });
   on("#rvNew", () => { $("[data-rpg=make]").click(); });
-  on("#rvGo", rvStart); on("#rvShow", () => { rv.shown = true; reviseView().then(() => { const b = $("#rvOk"); if (b) b.focus(); }); });
+  on("#rvGo", () => rvStart());
+  main.querySelectorAll("[data-qo]").forEach(b => b.onclick = () => rvChoose(+b.dataset.qo));
+  main.querySelectorAll("[data-rmode]").forEach(b => b.onclick = () => { cfg.reviseMode = b.dataset.rmode; saveCfg(); reviseView(); });
+  on("#rvNext", () => { rvAdvance(); reviseView(); }); on("#rvShow", () => { rv.shown = true; reviseView().then(() => { const b = $("#rvOk"); if (b) b.focus(); }); });
   on("#rvOk", () => rvAnswer(true)); on("#rvKo", () => rvAnswer(false));
   on("#rvStop", () => { rv.session = false; rv.list = null; rv.finished = null; reviseView(); });
   on("#rvHear", () => { const c = rv.queue[rv.idx]; readAloud(rv.shown ? `${c.front}. ${c.back}` : c.front); });
@@ -1921,6 +1995,20 @@ function exBanner() {
   const close = () => d.remove();
   $("#exBannerGo").onclick = () => { close(); exOpen(); };
   $("#exBannerNo").onclick = close; setTimeout(close, 90000);
+}
+
+// Fin de Pomodoro : s’il y a des cartes à revoir, une mini-séance de 5 cartes max est proposée (un bouton, rien ne s’ouvre tout seul).
+async function cardsBanner() {
+  if ($("#cdBanner") || !modOn("revise") || !window.__TAURI__?.core) return;
+  let list; try { list = await invoke("cards_list"); } catch { return; }
+  const n = list.filter(c => rvIsDue(c)).length, k = Math.min(5, n);
+  if (!n || $("#cdBanner")) return;
+  const d = document.createElement("div"); d.id = "cdBanner"; d.className = "upd-banner"; d.setAttribute("role", "status");
+  d.innerHTML = `<span>${n} carte${n > 1 ? "s" : ""} à revoir. ${k} carte${k > 1 ? "s" : ""}, ça prend 2 minutes.</span><button class="primary sm" id="cdBannerGo">Réviser ${k} carte${k > 1 ? "s" : ""}</button><button class="ghost sm" id="cdBannerNo">Plus tard</button>`;
+  bannerHost().appendChild(d);
+  const close = () => d.remove();
+  $("#cdBannerGo").onclick = () => { close(); rv.list = list; rv.page = "today"; rvStart(k, false); nav("revise"); };
+  $("#cdBannerNo").onclick = close; setTimeout(close, 90000);
 }
 
 // Rechercher : mot libre + boutons par cours. Un cours choisi sans mot = tout son contenu.

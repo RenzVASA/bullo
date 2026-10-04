@@ -248,3 +248,12 @@ body.lite .brand{justify-content:center;padding:0 0 12px}
 body.lite main .lead,body.lite #bgbar,body.lite #updBanner{display:none}
 body.lite main>.card,body.lite main>section.card{box-shadow:none}
 #liteBtn[aria-pressed=true]{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+
+.hint{color:var(--mute);font-size:.88rem;margin:-2px 0 12px 30px;line-height:1.45}
+.rv-opts{display:grid;gap:10px;margin:14px 0}
+.rv-opt{display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);font:inherit;cursor:pointer}
+.rv-opt b{flex:none;min-width:1.6em;height:1.6em;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--accent) 16%,var(--panel));font-size:.85rem}
+.rv-opt:hover:not(:disabled),.rv-opt:focus-visible{border-color:var(--accent)}
+.rv-opt:disabled{cursor:default;opacity:1}
+.rv-opt.good{border-color:#1a7f4b;background:color-mix(in srgb,#1a7f4b 16%,var(--panel))}
+.rv-opt.bad{border-color:#c0392b;background:color-mix(in srgb,#c0392b 14%,var(--panel))}

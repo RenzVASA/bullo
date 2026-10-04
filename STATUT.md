@@ -12,7 +12,7 @@ Légende : **Fait** = testé automatiquement dans un navigateur avec un faux bac
 | Réécoute de l'original (après navigation et redémarrage) | Fait (simulé) | Relue depuis le disque à chaque fois ; message explicite si le fichier manque |
 | Lecture vocale (résumé, transcription) | Fait (simulé) | Découpée en phrases, pause/reprise/arrêt, erreurs explicites. Dépend des voix du Mac |
 | Rappels et alarmes (création, report, édition, onglets) | Fait (interface) | Base SQLite persistante |
-| Notifications natives, fenêtre en arrière-plan | À valider sur Mac | Thread Rust + `osascript` ; autoriser « Éditeur de script » dans les notifications |
+| Notifications natives, fenêtre en arrière-plan | À valider sur Mac | Thread Rust + notifications natives macOS (UserNotifications), son de Bullo |
 | Détection des dates dans les devoirs | Fait | « demain 14h », « vendredi », « le 12 octobre », « 12/10 », « dans 2 jours »… |
 | Fond sonore (barre fixe, 6 sons, réduire, persistance, pause pendant l'enregistrement) | Fait (simulé) | Sons générés, aucun fichier |
 | Polices : OpenDyslexic, Verdana, Arial, Comic Sans, Dyslexie | Fait | Chaque police est vérifiée ; Dyslexie est commerciale (à installer toi-même) |
@@ -46,6 +46,9 @@ Le Rust ne peut pas être compilé dans l'environnement de construction (le regi
 | Notifications au nom de Bullo (v1.6.1) | Rust non compilé ici / **À valider sur Mac (app installée)** | Plugin officiel Tauri ; osascript gardé en secours |
 | Barre de menus Mac (v1.6) | Interface testée (simulé) / **Rust non compilé ici : à valider sur Mac** | Icône, 5 actions, petite fenêtre, rester dans la barre en fermant ; enregistrer fenêtre cachée à vérifier |
 | Réviser : cartes + répétition (v1.6) | Fait (simulé) / À valider avec Ollama sur un vrai cours | Génération par IA locale, relecture avant d'enregistrer, Leitner 1-3-7-14-30 j, sauvegardes |
+| Réviser : quiz à 4 choix, bannière après Pomodoro (v1.7) | Fait (simulé) | Logique du quiz testée sur 4000 tirages aléatoires |
+| Rappel quotidien des cartes (v1.7) | À valider sur Mac | Calcul de l'heure locale testé en Rust pur ; notification réelle à vérifier |
+| Raccourci global ⌥⌘N (v1.7) | À valider sur Mac | Dépend de `tauri-plugin-global-shortcut` ; interface et erreur de raccourci pris testées |
 | Mode épuré (v1.5) | Fait (simulé) | Menu en icônes, sans textes d'aide ni lecteur de sons |
 | Accessibilité (noms accessibles, clavier) | Fait (contrôle automatique) | Aucun essai avec VoiceOver à ce jour |
 | Licences des polices (v1.5) | Fait | Textes SIL OFL dans `src/fonts/licences/`, voir `THIRD_PARTY_NOTICES.md` |

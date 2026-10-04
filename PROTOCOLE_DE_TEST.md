@@ -109,6 +109,18 @@ Avec **Ollama fermé** :
 - [ ] « Commencer » affiche « Cette fonctionnalité a besoin d'Ollama. Ouvre l'application Ollama, puis réessaie. », rien ne plante, ton texte est conservé.
 - [ ] Après avoir ouvert Ollama, « Commencer » fonctionne sans retaper.
 
+## 5 sexdecies — Quiz, rappel des cartes, raccourci global (v1.7.0)
+- [ ] Réviser › À revoir : « Quiz à 4 choix » ; la séance affiche 4 réponses, ✅/❌ avec du texte, touches 1 à 4, « Question suivante ».
+- [ ] Une carte ratée revient une fois dans la séance ; le bilan s'affiche à la fin.
+- [ ] Moins de 4 cartes différentes : le quiz est grisé avec une explication.
+- [ ] Réglages › Sur ton Mac : mettre l'heure du rappel 2 minutes plus tard que maintenant, laisser des cartes à revoir : une notification avec le son de Bullo arrive à l'heure, une seule fois dans la journée.
+- [ ] Même chose sans carte à revoir : aucune notification.
+- [ ] Décocher « Jouer le petit son » : notification silencieuse.
+- [ ] **⌥⌘N** depuis un autre logiciel (Bullo caché) : la petite fenêtre « Note rapide » apparaît ; Entrée l'enregistre dans l'Inbox.
+- [ ] Décocher le raccourci : ⌥⌘N ne fait plus rien. Le recocher : il revient.
+- [ ] Fin d'un Pomodoro avec des cartes à revoir : bandeau « Réviser 5 cartes » ; le bouton lance la séance.
+- [ ] Réglages › Profil : « Essentiel », « Étudiant », « Tout afficher » changent le menu.
+
 ## 5 quindecies — Notifications (v1.6.1 à 1.6.3)
 - [ ] Application installée (pas `tauri dev`) : créer un rappel dans 1 minute. Le son de Bullo se joue ; si macOS demande l'autorisation pour Bullo, Autoriser. Sans notification macOS, la fenêtre de Bullo revient au premier plan avec le message. Jamais d'Éditeur de script.
 - [ ] Réglages Système › Notifications : « Bullo » apparaît dans la liste (s'il a pu être enregistré).

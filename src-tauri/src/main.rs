@@ -3,7 +3,7 @@
 use rusqlite::{params, params_from_iter, Connection};
 use serde::{Serialize, Deserialize};
 use sha2::{Digest, Sha256};
-use std::{fs, io::{Read, Write}, net::TcpListener, process::Command, sync::{atomic::{AtomicBool, Ordering}, Mutex}, time::{Duration, Instant, SystemTime, UNIX_EPOCH}};
+use std::{fs, io::{Read, Write}, net::TcpListener, process::Command, sync::{atomic::{AtomicBool, AtomicI64, Ordering}, Mutex}, time::{Duration, Instant, SystemTime, UNIX_EPOCH}};
 use tauri::{ipc::{InvokeBody, Request}, menu::{Menu, MenuItem, PredefinedMenuItem}, tray::{TrayIcon, TrayIconBuilder}, AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
 
 struct Db(Mutex<Connection>);
@@ -466,6 +466,7 @@ fn notify_native(title: &str, body: &str) -> Result<(), String> {
 
 // Son des notifications : `sounds/notification.(mp3|m4a|aiff|wav)` livré avec l'application ; à défaut, le son « Glass » de macOS.
 fn play_notif_sound(app: &AppHandle) {
+    if let Some(p) = app.try_state::<Prefs>() { if !p.sound.load(Ordering::Relaxed) { return; } }
     #[cfg(target_os = "macos")]
     {
         let custom = app.path().resource_dir().ok().map(|d| d.join("sounds")).and_then(|d| ["mp3", "m4a", "aiff", "wav"].iter().map(|x| d.join(format!("notification.{x}"))).find(|p| p.exists()));
@@ -538,9 +539,58 @@ fn due_reminders(db: &Db) -> Result<Vec<(i64, String)>, String> {
     Ok(out)
 }
 
+// ===== Préférences côté Rust (envoyées par l'interface) : son, rappel quotidien des cartes =====
+// Le thread de fond ne peut pas lire les réglages de l'interface : elle les lui transmet avec `prefs_set`.
+struct Prefs { sound: AtomicBool, cards_on: AtomicBool, cards_hour: AtomicI64, tz_east_min: AtomicI64 }
+
+// Jour local (numéro de jour depuis 1970) et minute dans la journée, à partir de l'heure UTC et du décalage du fuseau (minutes à l'est d'UTC).
+fn local_day_minute(now: i64, tz_east_min: i64) -> (i64, i64) {
+    let m = now.div_euclid(60) + tz_east_min;
+    (m.div_euclid(1440), m.rem_euclid(1440))
+}
+
+// Faut-il rappeler les cartes maintenant ? Oui à partir de l'heure choisie, une seule fois par jour local.
+fn cards_reminder_day(now: i64, tz_east_min: i64, hour: i64, last_day: Option<i64>) -> Option<i64> {
+    let (day, minute) = local_day_minute(now, tz_east_min);
+    if minute >= hour.clamp(0, 23) * 60 && last_day != Some(day) { Some(day) } else { None }
+}
+
+#[tauri::command]
+fn prefs_set(state: State<'_, Prefs>, sound: bool, cards_on: bool, cards_hour: i64, tz_east_min: i64) {
+    state.sound.store(sound, Ordering::Relaxed);
+    state.cards_on.store(cards_on, Ordering::Relaxed);
+    state.cards_hour.store(cards_hour.clamp(0, 23), Ordering::Relaxed);
+    state.tz_east_min.store(tz_east_min.clamp(-840, 840), Ordering::Relaxed);
+}
+
+fn kv_get(db: &Db, k: &str) -> Option<String> {
+    db.0.lock().ok()?.query_row("SELECT v FROM kv WHERE k=?1", params![k], |r| r.get::<_, String>(0)).ok()
+}
+fn kv_set(db: &Db, k: &str, v: &str) {
+    if let Ok(c) = db.0.lock() { let _ = c.execute("INSERT INTO kv(k,v) VALUES(?1,?2) ON CONFLICT(k) DO UPDATE SET v=excluded.v", params![k, v]); }
+}
+
+fn cards_due_count(db: &Db) -> i64 {
+    db.0.lock().ok().and_then(|c| c.query_row("SELECT COUNT(*) FROM cards WHERE due<=?1", params![now_secs()], |r| r.get::<_, i64>(0)).ok()).unwrap_or(0)
+}
+
+// Rappel quotidien : « N cartes à revoir », une fois par jour à l'heure choisie, seulement s'il y en a.
+fn check_cards_reminder(handle: &AppHandle) {
+    let (Some(p), Some(db)) = (handle.try_state::<Prefs>(), handle.try_state::<Db>()) else { return };
+    if !p.cards_on.load(Ordering::Relaxed) { return; }
+    let last = kv_get(&db, "cards_notified_day").and_then(|v| v.parse::<i64>().ok());
+    let Some(day) = cards_reminder_day(now_secs(), p.tz_east_min.load(Ordering::Relaxed), p.cards_hour.load(Ordering::Relaxed), last) else { return };
+    let n = cards_due_count(&db);
+    if n <= 0 { return; }
+    kv_set(&db, "cards_notified_day", &day.to_string());
+    let body = if n == 1 { "1 carte à revoir. Quelques minutes suffisent.".to_string() } else { format!("{n} cartes à revoir. Quelques minutes suffisent.") };
+    notify_system(handle, "Bullo — Réviser", &body);
+}
+
 fn start_reminder_watcher(handle: AppHandle) {
     std::thread::spawn(move || loop {
         std::thread::sleep(std::time::Duration::from_secs(15));
+        check_cards_reminder(&handle);
         let db = handle.state::<Db>();
         let due = match due_reminders(&db) { Ok(v) => v, Err(_) => continue };
         for (id, title) in due {
@@ -1420,6 +1470,25 @@ fn tray_set_recording(state: State<'_, TrayState>, on: bool) -> Result<(), Strin
 #[tauri::command]
 fn tray_config(state: State<'_, KeepOnClose>, keep: bool) { state.0.store(keep, Ordering::Relaxed); }
 
+// Raccourci global ⌥⌘N : ouvre « Note rapide » depuis n'importe quelle application. Renvoie une erreur lisible si le raccourci est déjà pris.
+fn quick_shortcut() -> tauri_plugin_global_shortcut::Shortcut {
+    use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut};
+    Shortcut::new(Some(Modifiers::ALT | Modifiers::SUPER), Code::KeyN)
+}
+
+#[tauri::command]
+fn shortcut_set(app: AppHandle, on: bool) -> Result<(), String> {
+    use tauri_plugin_global_shortcut::GlobalShortcutExt;
+    let gs = app.global_shortcut();
+    if on {
+        if gs.is_registered(quick_shortcut()) { return Ok(()); }
+        gs.register(quick_shortcut()).map_err(|er| format!("Raccourci ⌥⌘N indisponible (déjà utilisé par une autre application ?) : {er}"))
+    } else {
+        if gs.is_registered(quick_shortcut()) { gs.unregister(quick_shortcut()).map_err(e)?; }
+        Ok(())
+    }
+}
+
 // Enregistre le texte de la petite fenêtre dans l'Inbox (une pensée garde le préfixe 💭 comme le parking de pensées de Bien-être).
 #[tauri::command]
 fn quick_add(app: AppHandle, db: State<'_, Db>, window: tauri::WebviewWindow, text: String, park: bool) -> Result<(), String> {
@@ -1548,6 +1617,17 @@ fn save_course(app: AppHandle, course: String, title: String, md: String, audio:
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, _sc, ev| {
+                    if ev.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                        // Fenêtre créée dans un fil à part : évite tout blocage de la boucle d'événements.
+                        let a = app.clone();
+                        std::thread::spawn(move || open_quick(&a, "quick-note", "Note rapide"));
+                    }
+                })
+                .build(),
+        )
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
             fs::create_dir_all(&dir)?;
@@ -1588,7 +1668,9 @@ fn main() {
                    id INTEGER PRIMARY KEY, created TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, source INTEGER, course TEXT NOT NULL DEFAULT '',
                    front TEXT NOT NULL, back TEXT NOT NULL, level INTEGER NOT NULL DEFAULT 0, due INTEGER NOT NULL DEFAULT 0,
                    reps INTEGER NOT NULL DEFAULT 0, lapses INTEGER NOT NULL DEFAULT 0);")?;
+            conn.execute_batch("CREATE TABLE IF NOT EXISTS kv(k TEXT PRIMARY KEY, v TEXT NOT NULL);")?;
             app.manage(Db(Mutex::new(conn)));
+            app.manage(Prefs { sound: AtomicBool::new(true), cards_on: AtomicBool::new(false), cards_hour: AtomicI64::new(18), tz_east_min: AtomicI64::new(0) });
             app.manage(KeepOnClose(AtomicBool::new(true)));
             // Pas d'icône dans la barre de menus ne doit jamais empêcher Bullo de démarrer.
             if let Err(er) = setup_tray(app) { eprintln!("Barre de menus indisponible : {er}"); }
@@ -1602,7 +1684,7 @@ fn main() {
                 if win.label() == "main" && keep && tray_ok { api.prevent_close(); let _ = win.hide(); }
             }
         })
-        .invoke_handler(tauri::generate_handler![player_diagnostic, media_key_test, now_playing, open_web, system_audio, system_mute, system_volume, add_item, add_course, read_audio, save_download, google_status, google_save_keys, google_clear_keys, google_connect, google_cancel, google_disconnect, google_backup, google_restore, open_url, install_fonts, list_fonts, read_font, notify, media_status, media_control, media_volume, media_open, add_reminder, list_reminders, update_reminder, delete_reminder, list_items, search, set_done, delete_item, save_audio, transcribe, summarize, assist, explain_turn, explain_save, explain_list, explain_delete, cards_generate, cards_add, cards_list, cards_review, cards_delete, export_md, pick, open_path, set_audio_dir, get_audio_dir, check_installation, check_update, install_update, tray_set_recording, tray_config, quick_add, quick_close, install_dependency, import_text, save_course, export_backup, import_backup])
+        .invoke_handler(tauri::generate_handler![player_diagnostic, media_key_test, now_playing, open_web, system_audio, system_mute, system_volume, add_item, add_course, read_audio, save_download, google_status, google_save_keys, google_clear_keys, google_connect, google_cancel, google_disconnect, google_backup, google_restore, open_url, install_fonts, list_fonts, read_font, notify, media_status, media_control, media_volume, media_open, add_reminder, list_reminders, update_reminder, delete_reminder, list_items, search, set_done, delete_item, save_audio, transcribe, summarize, assist, explain_turn, explain_save, explain_list, explain_delete, cards_generate, cards_add, cards_list, cards_review, cards_delete, export_md, pick, open_path, set_audio_dir, get_audio_dir, check_installation, check_update, install_update, tray_set_recording, tray_config, prefs_set, shortcut_set, quick_add, quick_close, install_dependency, import_text, save_course, export_backup, import_backup])
         .build(tauri::generate_context!())
         .expect("erreur au lancement de Bullo")
         .run(|_app, _event| {

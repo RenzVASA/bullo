@@ -2,6 +2,25 @@
 
 Format : une section par version, la plus récente en haut.
 
+## 1.7.0 — 2026-10-04
+
+### Réviser
+- **Quiz à 4 choix** en plus des cartes à retourner, sans IA : les mauvais choix sont les réponses d'autres cartes (du même cours en priorité). Touches 1 à 4 au clavier. Il faut au moins 4 cartes avec des réponses différentes ; sinon la séance se fait en cartes à retourner.
+- **Rappel quotidien** : une notification par jour, à l'heure choisie (18 h par défaut), « N cartes à revoir », seulement s'il y en a. Avec le son de Bullo. Réglable ou désactivable.
+- **Fin de Pomodoro** : s'il y a des cartes à revoir, Bullo propose une mini-séance de 5 cartes (un bouton, rien ne s'ouvre tout seul).
+
+### Note rapide partout
+- **Raccourci global ⌥⌘N** : ouvre « Note rapide » depuis n'importe quelle application, même quand Bullo est caché. Si un autre logiciel utilise déjà ce raccourci, Bullo l'indique dans Réglages. Désactivable.
+
+### Réglages plus clairs
+- Nouvel onglet **Sur ton Mac** : barre de menus, raccourci global, son des notifications, rappel des cartes et heure, chacun avec une phrase d'explication.
+- Réglages › Profil : boutons de préréglage des modules (Essentiel, Étudiant, Tout afficher).
+- Nouveau réglage : couper le son des notifications.
+
+### Technique
+- Nouvelle dépendance : `tauri-plugin-global-shortcut` (le fichier `Cargo.lock` change à la première compilation : à valider avec `git add .`).
+- Alertes de sécurité GitHub : les dépendances de développement (`sharp`, `@tauri-apps/cli`) ne sont pas livrées dans l'application. Fusionner la mise à jour proposée par Dependabot après publication.
+
 ## 1.6.3 — 2026-10-04
 
 ### Corrections
