@@ -44,7 +44,7 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "
 const errText = x => (x && x.message) ? x.message : String(x);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const main = $("#main");
-const APP_VERSION = "1.6.0", ABOUT_CREDIT = "Vibe codé par Renz-VASA, avec un peu d’intelligence artificielle ✨";
+const APP_VERSION = "1.6.1", ABOUT_CREDIT = "Vibe codé par Renz-VASA, avec un peu d’intelligence artificielle ✨";
 
 // Clés de stockage locales (préfixe bullo_). Les anciennes clés de la version précédente sont migrées une seule fois, puis supprimées.
 const KEYS = { cfg: "bullo_cfg", tags: "bullo_tags", vers: "bullo_note_versions", draft: "bullo_draft", focus: "bullo_focus", pom: "bullo_pom_enabled", googleWhen: "bullo_google_when" };

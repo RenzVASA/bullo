@@ -7,7 +7,7 @@
 [![Télécharger pour Mac](https://img.shields.io/badge/%E2%AC%87%20T%C3%A9l%C3%A9charger%20pour%20Mac-5b4bf5?style=for-the-badge)](../../releases/latest)
 
 ![Plateforme](https://img.shields.io/badge/macOS-Apple%20Silicon-111?style=flat-square)
-![Version](https://img.shields.io/badge/version-1.0.0-5b4bf5?style=flat-square)
+[![Version](https://img.shields.io/github/v/release/RenzVASA/bullo?style=flat-square&color=5b4bf5&label=version)](https://github.com/RenzVASA/bullo/releases/latest)
 ![Licence](https://img.shields.io/badge/licence-MIT-46cdfb?style=flat-square)
 ![Local](https://img.shields.io/badge/donn%C3%A9es-100%20%25%20locales-12794a?style=flat-square)
 
@@ -52,7 +52,7 @@ Ensuite Bullo te guide : il demande l'accès au micro, et propose d'installer lu
 
 ## État du projet
 
-Version **1.0.0**. L'interface est testée automatiquement ; les fonctions propres au Mac (micro, AppleScript, Google Drive, notifications) sont en cours de validation. Détail dans [STATUT.md](STATUT.md). Les captures ci-dessus sont des rendus du simulateur.
+Dernière version : voir le badge ci-dessus et [CHANGELOG.md](CHANGELOG.md). L'interface est testée automatiquement ; les fonctions propres au Mac (micro, barre de menus, Google Drive, notifications) sont validées au fil des versions par l'auteur sur son Mac. Détail dans [STATUT.md](STATUT.md). Les captures ci-dessus sont des rendus du simulateur.
 
 ## Participer
 

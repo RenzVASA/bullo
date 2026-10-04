@@ -446,21 +446,23 @@ struct Reminder { id: i64, title: String, due: i64, done: bool, notified: bool }
 
 fn now_secs() -> i64 { SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0) }
 
-// Notification système : seule partie spécifique à macOS (osascript). Ajouter ici Windows/Linux plus tard.
-fn notify_system(title: &str, body: &str) {
+// Notification système. On passe par le plugin officiel : la notification porte le nom et l'icône de Bullo, et un clic ramène Bullo.
+// (Avant, on passait par osascript, et macOS l'attribuait à « Éditeur de script » — un clic l'ouvrait.) osascript ne sert plus que de secours.
+// En `tauri dev`, macOS peut encore l'attribuer au Terminal : c'est normal, l'application installée utilise son propre nom.
+fn notify_system(app: &AppHandle, title: &str, body: &str) {
+    use tauri_plugin_notification::NotificationExt;
+    if app.notification().builder().title(title).body(body).show().is_ok() { return; }
     #[cfg(target_os = "macos")]
     {
         let esc = |t: &str| t.replace('\\', "\\\\").replace('"', "\\\"");
         let script = format!("display notification \"{}\" with title \"{}\" sound name \"Glass\"", esc(body), esc(title));
         let _ = Command::new("osascript").args(["-e", script.as_str()]).output();
     }
-    #[cfg(not(target_os = "macos"))]
-    { let _ = (title, body); }
 }
 
 #[tauri::command]
-async fn notify(title: String, body: String) -> Result<(), String> {
-    tauri::async_runtime::spawn_blocking(move || notify_system(&title, &body)).await.map_err(e)
+async fn notify(app: AppHandle, title: String, body: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || notify_system(&app, &title, &body)).await.map_err(e)
 }
 
 #[tauri::command]
@@ -510,7 +512,7 @@ fn start_reminder_watcher(handle: AppHandle) {
         let db = handle.state::<Db>();
         let due = match due_reminders(&db) { Ok(v) => v, Err(_) => continue };
         for (id, title) in due {
-            notify_system("Bullo — rappel", &title);
+            notify_system(&handle, "Bullo — rappel", &title);
             if let Ok(c) = db.0.lock() { let _ = c.execute("UPDATE reminders SET notified=1 WHERE id=?1", params![id]); }
         }
     });
@@ -1514,6 +1516,7 @@ fn save_course(app: AppHandle, course: String, title: String, md: String, audio:
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
             fs::create_dir_all(&dir)?;

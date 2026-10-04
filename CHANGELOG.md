@@ -2,6 +2,15 @@
 
 Format : une section par version, la plus récente en haut.
 
+## 1.6.1 — 2026-10-04
+
+### Corrections
+- **Notifications** : elles s'affichaient au nom de l'« Éditeur de script » de macOS, et un clic dessus ouvrait cette application. Elles passent maintenant par le système de notifications de Bullo : nom et icône de Bullo. Au premier rappel, macOS peut demander l'autorisation d'envoyer des notifications à **Bullo**.
+- En `npm run tauri dev`, macOS peut encore attribuer la notification au Terminal : le test fiable se fait avec l'application installée.
+
+### Présentation
+- README, site et feuille de route mis à jour (le badge de version suit désormais automatiquement la dernière Release ; le site présente Réviser, la barre de menus et les modules facultatifs).
+
 ## 1.6.0 — 2026-10-04
 
 ### Nouveautés

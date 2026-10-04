@@ -1,6 +1,6 @@
 [package]
 name = "bullo"
-version = "1.6.0"
+version = "1.6.1"
 edition = "2021"
 
 [build-dependencies]
@@ -14,3 +14,4 @@ rusqlite = { version = "0.32", features = ["bundled"] }
 ureq = { version = "2", features = ["json"] }
 sha2 = "0.10"
 tauri-plugin-updater = "2"
+tauri-plugin-notification = "2"
