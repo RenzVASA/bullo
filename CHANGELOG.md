@@ -2,6 +2,15 @@
 
 Format : une section par version, la plus récente en haut.
 
+## 1.4.0 — 2026-10-04
+
+### Sécurité
+- **Mises à jour signées** : chaque nouvelle version est maintenant signée avec une clé secrète qui ne quitte jamais l'ordinateur du développeur. Avant d'installer quoi que ce soit, Bullo vérifie cette signature : une version modifiée ou publiée par quelqu'un d'autre est refusée, même si elle vient de GitHub.
+- La mise à jour s'installe et Bullo redémarre directement, sans script intermédiaire.
+
+### À savoir
+- Le passage de la 1.3.3 à la 1.4.0 se fait encore avec l'ancienne méthode (empreinte SHA-256). Toutes les mises à jour suivantes seront signées.
+
 ## 1.3.3 — 2026-10-04
 
 ### Nouveautés

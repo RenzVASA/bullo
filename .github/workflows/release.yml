@@ -1,8 +1,9 @@
-# Fabrique l'application (.dmg) quand tu publies une version : git tag v1.0.0 && git push --tags
-name: Publier une version
+# Ancienne méthode de publication, gardée pour dépanner (lancement manuel depuis l'onglet Actions).
+# Les versions sont maintenant publiées depuis le Mac avec : npm run release
+# (la clé qui signe les mises à jour ne quitte jamais le Mac, elle n'est pas sur GitHub).
+name: Publier une version (manuel)
 on:
-  push:
-    tags: ['v*']
+  workflow_dispatch:
 permissions:
   contents: write
 jobs:

@@ -1,6 +1,6 @@
 {
   "productName": "Bullo",
-  "version": "1.3.3",
+  "version": "1.4.0",
   "identifier": "app.bullo.desktop",
   "build": {
     "frontendDist": "../src"
@@ -31,6 +31,15 @@
       "icons/icon.icns",
       "icons/icon.ico",
       "icons/icon.png"
-    ]
+    ],
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQzQTRGRUQ2RDczQzY2OTgKUldTWVpqelgxdjZrMHlISy85eFkrTFovMWZhb3R6dVdIcThsWTFzcTZwN2pVZjVkb2hQQ3VxRFYK",
+      "endpoints": [
+        "https://github.com/RenzVASA/bullo/releases/latest/download/latest.json"
+      ]
+    }
   }
 }
