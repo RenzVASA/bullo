@@ -114,7 +114,7 @@ Sans ce fichier, Bullo utilise son logo vectoriel `src/bullo-logo.svg` (pas de �
 - `PROTOCOLE_DE_TEST.md` : tests à cocher · `STATUT.md` : état réel de chaque fonctionnalité · `PROMPT_BULLO.md` : prompt pour tout régénérer
 
 ### Limites connues
-Les fichiers audio ne sont jamais inclus dans les sauvegardes. Le contrôle de Music et Spotify passe par AppleScript : macOS demande une autorisation « Automation » la première fois. Lexend et Atkinson se téléchargent depuis Réglages > Apparence (internet requis, une seule fois) ; « Dyslexie » est une police payante qui n'apparaît que si tu l'as installée.
+Les fichiers audio ne sont jamais inclus dans les sauvegardes. Le contrôle de Music et Spotify passe par AppleScript : macOS demande une autorisation « Automation » la première fois. Polices incluses (Bricolage Grotesque, Atkinson Hyperlegible, OpenDyslexic) sous licence SIL OFL : voir `THIRD_PARTY_NOTICES.md` et `src/fonts/licences/`. Lexend et Atkinson se téléchargent depuis Réglages > Apparence (internet requis, une seule fois) ; « Dyslexie » est une police payante qui n'apparaît que si tu l'as installée.
 
 ### Importer une image (OCR)
 Si Tesseract manque, Bullo affiche un bouton « Installer automatiquement et réessayer » (il lance `brew install tesseract tesseract-lang`, Homebrew requis).
@@ -137,6 +137,9 @@ Par défaut (réglable dans Réglages > Fond sonore), Bullo **met en sourdine to
 ### Bien-être
 Onglet **Bien-être** : parking de pensées (Ctrl+Maj+P depuis n'importe où : tu notes l'idée parasite, tu la tries plus tard, ou tu en fais une tâche), respiration guidée (carrée, 4-7-8, cohérence 5-5, sans animation si « réduire les animations » est activé) et pauses douces (rappel d'eau, d'étirement, de regarder au loin).
 
+### Mode épuré
+Le bouton « Mode épuré » du menu (ou Réglages › Confort) réduit le menu à des icônes et masque les textes d'aide, le lecteur de sons et les bandeaux, pour les jours où l'écran est trop chargé. Aucun contenu n'est touché.
+
 ### Premier lancement et modules
 Au premier lancement, Bullo propose en 3 étapes (toutes facultatives) : un prénom, ce qu'on veut afficher (Rappels, Rechercher, Outils, Explique-moi, Bien-être peuvent être masqués), et un code d'accès avec indice. Tout se change ensuite dans Réglages > Profil. Il n'y a pas de compte en ligne : le profil et le code restent sur l'ordinateur, et le code protège la discrétion, il ne chiffre pas les notes.
 
@@ -148,7 +151,7 @@ Réglages > Google Drive > « Démarrer le tutoriel » : 6 étapes dans l'appli 
 - Une **empreinte SHA-256** des clés est calculée à l'enregistrement et vérifiée à chaque lecture : si les clés sont modifiées ou corrompues, Bullo le signale (⚠️) et refuse de se connecter. L'empreinte est affichée dans Réglages ; la clé elle-même ne l'est jamais.
 - Les clés sont **chiffrées dans le Trousseau macOS** (pas de hachage : Bullo doit pouvoir les relire). Elles ne sont jamais écrites dans un fichier ni dans les réglages.
 - Connexion OAuth 2.0 avec PKCE sur une adresse locale (127.0.0.1), accès limité aux fichiers créés par Bullo.
-- Sauvegarde : Drive › Bullo › `bullo-sauvegarde.json` (notes, cours, rappels), avec contrôle d'intégrité SHA-256. Restauration avec copie de sécurité `avant-restauration-….json` dans le dossier de données de Bullo. Option de sauvegarde automatique après chaque cours.
+- Sauvegarde : Drive › Bullo › `bullo-sauvegarde.json` (notes, cours, rappels, séances d'Explique-moi ; pas les fichiers audio), avec contrôle d'intégrité SHA-256. Restauration avec copie de sécurité `avant-restauration-….json` dans le dossier de données de Bullo. Option de sauvegarde automatique après chaque cours.
 - Si Google affiche « n'a pas validé cette appli » : Paramètres avancés > Accéder à Bullo. Si l'appli reste en mode Test, Google peut couper l'accès après environ 7 jours : publie-la en Production ou reconnecte-toi.
 
 

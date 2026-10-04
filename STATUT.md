@@ -1,6 +1,6 @@
 # Bullo — état réel des fonctionnalités
 
-Légende : **Fait** = testé automatiquement dans un navigateur avec un faux backend Tauri (110 vérifications) ; **À valider sur Mac** = code écrit, mais dépend du Mac réel (Rust non compilé ici, micro, whisper, Ollama, notifications).
+Légende : **Fait** = testé automatiquement dans un navigateur avec un faux backend Tauri (plus de 400 vérifications, suites t5 à t22) ; **À valider sur Mac** = code écrit, mais dépend du Mac réel (micro, whisper, Ollama, notifications, Drive). **Vérifié sur Mac** = confirmé par l'auteur sur son Mac.
 
 | Fonctionnalité | Statut | Remarque |
 |---|---|---|
@@ -35,22 +35,30 @@ Légende : **Fait** = testé automatiquement dans un navigateur avec un faux bac
 | Google Drive : tutoriel, clés dans le Trousseau, OAuth, sauvegarde et restauration | À valider sur Mac | Interface et enchaînement testés en simulation ; OAuth, Trousseau et API Drive jamais exécutés pour de vrai |
 | Migration depuis FocusFlow | À valider sur Mac | Copie de la base et des réglages |
 
-Aucune compilation Rust n'a pu être exécutée dans l'environnement de construction (le registre de crates est inaccessible). Seules la syntaxe (rustfmt) et quelques fonctions pures ont été vérifiées. Premier réflexe sur ton Mac : `npm run tauri dev` et lis les éventuelles erreurs de compilation.
+Le Rust ne peut pas être compilé dans l'environnement de construction (le registre de crates est inaccessible) : seuls rustfmt et quelques fonctions pures y sont vérifiés. La compilation se fait sur le Mac de l'auteur (`npm run tauri dev`), qui a compilé, installé et mis à jour Bullo jusqu'à la 1.4.0.
 
 
 
+| Mise à jour en un clic (signée, v1.4) | Vérifié sur Mac (1.3.3 → 1.4.0) | Le passage 1.3.3 → 1.4.0 a utilisé l'ancienne méthode (empreinte SHA-256). La première mise à jour vérifiée par signature reste à voir à la prochaine version |
+| Écran de bienvenue, modules masquables, code d'accès avec indice (v1.3) | Fait (simulé) | Prénom, choix des modules, code facultatif. Pas de compte en ligne ; le code ne chiffre pas les notes |
+| Résumé IA des longs textes (v1.3.2) | À valider sur Mac | Fenêtre de lecture adaptée et découpage au-delà de ~40 000 caractères. À essayer avec un vrai cours de plusieurs minutes |
+| Sauvegarde complète (v1.5) | Fait (simulé) / À valider sur Mac | Notes, cours, rappels et séances d'Explique-moi, avec copie de sécurité avant restauration ; pas les fichiers audio. Rust non compilé ici |
+| Mode épuré (v1.5) | Fait (simulé) | Menu en icônes, sans textes d'aide ni lecteur de sons |
+| Accessibilité (noms accessibles, clavier) | Fait (contrôle automatique) | Aucun essai avec VoiceOver à ce jour |
+| Licences des polices (v1.5) | Fait | Textes SIL OFL dans `src/fonts/licences/`, voir `THIRD_PARTY_NOTICES.md` |
 | Lecteur léger (v11) | À valider sur Mac | Un seul `pmset` par relevé ; seule l'appli qui joue est interrogée ; titres d'onglet relus toutes les 10 s, pause toutes les 15 s, volume toutes les 15 s, relevé toutes les 4 s. Logique de tri testée à part, Rust non compilé |
 
 ## Ce qui n'a pas pu être fait / limites connues
-- Rust jamais compilé ici (registre de crates bloqué) : seul rustfmt et quelques fonctions pures ont été vérifiés. Premier `npm run tauri dev` = corriger les éventuelles erreurs.
+- Rust jamais compilé dans l'environnement de construction (registre de crates bloqué) : seul rustfmt et quelques fonctions pures y sont vérifiés ; la compilation réelle se fait sur le Mac de l'auteur.
 - Jamais exécuté pour de vrai : OAuth Google, Trousseau, API Drive, AppleScript/JXA (touches média), `pmset`, `brew install`, URL de téléchargement des polices, `fetch_ics`, fenêtre Pronote.
 - Lecteur intégré d'Opera GX (barre latérale) : pas un onglet, donc titre indétectable ; bouton Diagnostic pour voir ce que Bullo détecte.
 - Bug « capture perdue en changeant de page » : jamais reproduit en simulation ; l'état est désormais sauvegardé en continu.
 - « Hachage » de la clé Google : une clé qu'on doit relire ne peut pas être hachée ; elle est chiffrée dans le Trousseau + empreinte SHA-256 de contrôle.
-- Anciennes suites de tests t1–t4 perdues ; t5–t12 (~190 vérifications) passent.
+- Anciennes suites de tests t1–t4 perdues ; t5–t22 passent.
 - Logo : le fichier d'origine n'a jamais été reçu ; l'image envoyée dans le chat est utilisée.
 - Dyslexie est une police payante. Le nom « Renz-VASA » vient de la dictée vocale (`ABOUT_CREDIT` dans `src/index.html`).
 - Les noms de menus dans les tutoriels Google Cloud n'ont pas été vérifiés.
 - Pronote et carnet scolaire : retirés à ta demande (pas possible pour le moment : pas d'API publique, protocole non officiel).
-- Les favoris du lecteur ne sont pas dans la sauvegarde Google Drive.
+- Les favoris du lecteur et les fichiers audio ne sont pas dans les sauvegardes.
+- Aucun essai avec un lecteur d'écran (VoiceOver) : seuls les noms accessibles et la navigation au clavier sont contrôlés automatiquement.
 - Refonte visuelle v10 : vérifiée sur captures (clair, sombre, contraste élevé, fenêtre étroite) ; jamais vue dans la vraie fenêtre Tauri/macOS.

@@ -27,7 +27,7 @@ nav button.on svg{opacity:1}
 .brand{display:flex;align-items:center;gap:10px;padding:2px 8px 16px}
 .brand img{border-radius:10px}
 .brand b{font:800 1.35rem var(--disp,Display),sans-serif;letter-spacing:-.03em;color:var(--ink)}
-#me{margin-top:auto;border:1.5px solid var(--line)}
+#me{margin-top:6px;border:1.5px solid var(--line)}
 
 /* --- Contenu --- */
 main{flex:1;overflow:auto;padding:38px min(6vw,60px) calc(38px + var(--bar-h) + 14px);max-width:900px}
@@ -239,3 +239,12 @@ nav button[hidden]{display:none!important}
 #welcome .mods label{margin:0}
 .greet{margin:-.2em 0 1.1em}
 .body-full{white-space:pre-wrap;overflow-wrap:anywhere}.body-ex{overflow-wrap:anywhere}.body-act{gap:6px;margin:6px 0 0}
+
+/* Mode épuré : on retire le superflu, jamais les contenus de l'utilisateur */
+body.lite nav{width:70px;margin-left:8px;padding:14px 6px}
+body.lite nav button{justify-content:center;padding:12px}
+body.lite nav button span,body.lite .brand b{display:none}
+body.lite .brand{justify-content:center;padding:0 0 12px}
+body.lite main .lead,body.lite #bgbar,body.lite #updBanner{display:none}
+body.lite main>.card,body.lite main>section.card{box-shadow:none}
+#liteBtn[aria-pressed=true]{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}

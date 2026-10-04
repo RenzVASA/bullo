@@ -1,6 +1,6 @@
 {
   "productName": "Bullo",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "identifier": "app.bullo.desktop",
   "build": {
     "frontendDist": "../src"

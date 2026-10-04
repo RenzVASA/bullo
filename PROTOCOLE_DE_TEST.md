@@ -109,6 +109,13 @@ Avec **Ollama fermé** :
 - [ ] « Commencer » affiche « Cette fonctionnalité a besoin d'Ollama. Ouvre l'application Ollama, puis réessaie. », rien ne plante, ton texte est conservé.
 - [ ] Après avoir ouvert Ollama, « Commencer » fonctionne sans retaper.
 
+## 5 terdecies — Mode épuré, sauvegarde complète, licences (v1.5.0)
+- [ ] Menu › « Mode épuré » : le menu passe en icônes, les textes d'aide et le lecteur de sons disparaissent ; un second clic remet tout. Les notes sont intactes.
+- [ ] Faire une séance Explique-moi, puis Réglages › Données › Sauvegarder (fichier). Effacer la séance, restaurer : la séance est de retour, avec la copie de sécurité annoncée.
+- [ ] Restaurer une ancienne sauvegarde (avant 1.5.0) : le message précise que les rappels et séances existants sont restés tels quels.
+- [ ] Réglages › À propos : la mention sur les polices est présente.
+- [ ] Mise à jour 1.4.0 → 1.5.0 en un clic (première mise à jour signée) : Bullo redémarre avec le numéro 1.5.0.
+
 ## 5 duodecies — Mise à jour en un clic (v1.3.3)
 - [ ] Bullo installé dans Applications en 1.3.3, puis une version plus récente publiée : le bandeau affiche « Installer et redémarrer ».
 - [ ] Clic : message de téléchargement, Bullo se ferme, puis se rouvre seul avec le nouveau numéro dans Réglages › À propos. Notes et réglages intacts.

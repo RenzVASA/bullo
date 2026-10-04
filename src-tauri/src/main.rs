@@ -271,7 +271,7 @@ async fn explain_turn(topic: String, messages: Vec<ChatMsg>, bilan: bool) -> Res
     }).await.map_err(e)?
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 struct Explanation { id: i64, created: String, topic: String, explanation: String, turns: String, bilan: String }
 
 // Crée la séance (id absent) ou la met à jour. `turns` et `bilan` sont du JSON gardé tel quel.
@@ -333,30 +333,6 @@ struct BackupEnvelope { version: u32, content_sha256: String, content: String }
 fn backup_hash(content: &str) -> String {
     let mut h = Sha256::new(); h.update(content.as_bytes());
     format!("{:x}", h.finalize())
-}
-
-#[tauri::command]
-fn export_backup(_app: AppHandle, db: State<'_, Db>, path: String) -> Result<String, String> {
-    let items = query(&db, format!("SELECT {COLS} FROM items ORDER BY id"), vec![])?;
-    let content = serde_json::to_string(&items).map_err(e)?;
-    let env = BackupEnvelope { version: 1, content_sha256: backup_hash(&content), content };
-    let p = std::path::PathBuf::from(path);
-    if p.as_os_str().is_empty() { return Err("Fichier de sauvegarde vide.".into()); }
-    fs::write(&p, serde_json::to_string_pretty(&env).map_err(e)?).map_err(e)?;
-    Ok(p.to_string_lossy().into_owned())
-}
-
-#[tauri::command]
-fn import_backup(db: State<'_, Db>, path: String) -> Result<usize, String> {
-    let raw = fs::read_to_string(&path).map_err(|_| "Fichier de sauvegarde introuvable ou illisible.".to_string())?;
-    let env: BackupEnvelope = serde_json::from_str(&raw).map_err(|_| "Format de sauvegarde invalide ou fichier corrompu.".to_string())?;
-    let actual = backup_hash(&env.content);
-    if actual != env.content_sha256 { return Err(format!("Sauvegarde refusée : intégrité invalide (hash SHA-256 attendu {}, obtenu {}). Le fichier a été modifié ou est corrompu.", env.content_sha256, actual)); }
-    let items: Vec<Item> = serde_json::from_str(&env.content).map_err(|_| "Contenu de sauvegarde invalide.".to_string())?;
-    let mut c = db.0.lock().map_err(e)?; let tx = c.transaction().map_err(e)?;
-    tx.execute("DELETE FROM items", []).map_err(e)?;
-    for i in &items { tx.execute("INSERT INTO items(id,kind,title,body,done,created,course,data,audio,parent) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)", params![i.id,i.kind,i.title,i.body,i.done as i64,i.created,i.course,i.data,i.audio,i.parent]).map_err(e)?; }
-    tx.commit().map_err(e)?; Ok(items.len())
 }
 
 // Export Markdown de tout le contenu dans Documents/Bullo-export.md (on n'est jamais prisonnier de l'appli).
@@ -1027,8 +1003,9 @@ fn drive_folder(tok: &str) -> Result<String, String> {
     v["id"].as_str().map(String::from).ok_or_else(|| "Google n'a pas créé le dossier Bullo.".to_string())
 }
 
+// Contenu d'une sauvegarde : notes et cours, rappels, séances d'« Explique-moi ». Les champs absents (anciennes sauvegardes) ne touchent pas aux données actuelles.
 #[derive(Serialize, Deserialize)]
-struct FullBackup { items: Vec<Item>, #[serde(default)] reminders: Vec<Reminder> }
+struct FullBackup { items: Vec<Item>, #[serde(default)] reminders: Option<Vec<Reminder>>, #[serde(default)] explanations: Option<Vec<Explanation>> }
 
 fn reminders_all(db: &Db) -> Result<Vec<Reminder>, String> {
     let c = db.0.lock().map_err(e)?;
@@ -1036,28 +1013,81 @@ fn reminders_all(db: &Db) -> Result<Vec<Reminder>, String> {
     let rows = s.query_map([], |r| Ok(Reminder { id: r.get(0)?, title: r.get(1)?, due: r.get(2)?, done: r.get::<_, i64>(3)? != 0, notified: r.get::<_, i64>(4)? != 0 })).map_err(e)?;
     let out = rows.collect::<Result<Vec<_>, _>>().map_err(e)?; Ok(out)
 }
-fn full_backup_envelope(db: &Db) -> Result<(String, usize, usize), String> {
+fn explanations_all(db: &Db) -> Result<Vec<Explanation>, String> {
+    let c = db.0.lock().map_err(e)?;
+    let mut s = c.prepare("SELECT id,created,topic,explanation,turns,bilan FROM explanations ORDER BY id").map_err(e)?;
+    let rows = s.query_map([], |r| Ok(Explanation { id: r.get(0)?, created: r.get(1)?, topic: r.get(2)?, explanation: r.get(3)?, turns: r.get(4)?, bilan: r.get(5)? })).map_err(e)?;
+    let out = rows.collect::<Result<Vec<_>, _>>().map_err(e)?; Ok(out)
+}
+// (texte JSON de la sauvegarde, nb d'éléments, nb de rappels, nb de séances)
+fn full_backup_envelope(db: &Db) -> Result<(String, usize, usize, usize), String> {
     let items = query(db, format!("SELECT {COLS} FROM items ORDER BY id"), vec![])?;
     let reminders = reminders_all(db)?;
-    let (ni, nr) = (items.len(), reminders.len());
-    let content = serde_json::to_string(&FullBackup { items, reminders }).map_err(e)?;
+    let explanations = explanations_all(db)?;
+    let (ni, nr, ne) = (items.len(), reminders.len(), explanations.len());
+    let content = serde_json::to_string(&FullBackup { items, reminders: Some(reminders), explanations: Some(explanations) }).map_err(e)?;
     let env = BackupEnvelope { version: 2, content_sha256: backup_hash(&content), content };
-    Ok((serde_json::to_string(&env).map_err(e)?, ni, nr))
+    Ok((serde_json::to_string(&env).map_err(e)?, ni, nr, ne))
 }
-fn restore_all(db: &Db, items: &[Item], reminders: &[Reminder]) -> Result<(), String> {
+// Lit une sauvegarde (fichier ou Drive) : vérifie l'intégrité puis comprend l'ancien format (liste de notes seule) comme le nouveau.
+fn parse_backup(raw: &str) -> Result<FullBackup, String> {
+    let env: BackupEnvelope = serde_json::from_str(raw).map_err(|_| "Format de sauvegarde invalide ou fichier corrompu.".to_string())?;
+    let actual = backup_hash(&env.content);
+    if actual != env.content_sha256 { return Err("Sauvegarde refusée : le fichier a été modifié ou est corrompu (contrôle d'intégrité SHA-256).".to_string()); }
+    match serde_json::from_str::<FullBackup>(&env.content) {
+        Ok(f) => Ok(f),
+        Err(_) => Ok(FullBackup { items: serde_json::from_str::<Vec<Item>>(&env.content).map_err(|_| "Contenu de sauvegarde invalide.".to_string())?, reminders: None, explanations: None }),
+    }
+}
+fn restore_all(db: &Db, b: &FullBackup) -> Result<(), String> {
     let mut c = db.0.lock().map_err(e)?; let tx = c.transaction().map_err(e)?;
     tx.execute("DELETE FROM items", []).map_err(e)?;
-    for i in items { tx.execute("INSERT INTO items(id,kind,title,body,done,created,course,data,audio,parent) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)", params![i.id,i.kind,i.title,i.body,i.done as i64,i.created,i.course,i.data,i.audio,i.parent]).map_err(e)?; }
-    tx.execute("DELETE FROM reminders", []).map_err(e)?;
-    for r in reminders { tx.execute("INSERT INTO reminders(id,title,due,done,notified) VALUES(?1,?2,?3,?4,?5)", params![r.id, r.title, r.due, r.done as i64, r.notified as i64]).map_err(e)?; }
+    for i in &b.items { tx.execute("INSERT INTO items(id,kind,title,body,done,created,course,data,audio,parent) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)", params![i.id,i.kind,i.title,i.body,i.done as i64,i.created,i.course,i.data,i.audio,i.parent]).map_err(e)?; }
+    if let Some(rs) = &b.reminders {
+        tx.execute("DELETE FROM reminders", []).map_err(e)?;
+        for r in rs { tx.execute("INSERT INTO reminders(id,title,due,done,notified) VALUES(?1,?2,?3,?4,?5)", params![r.id, r.title, r.due, r.done as i64, r.notified as i64]).map_err(e)?; }
+    }
+    if let Some(xs) = &b.explanations {
+        tx.execute("DELETE FROM explanations", []).map_err(e)?;
+        for x in xs { tx.execute("INSERT INTO explanations(id,created,topic,explanation,turns,bilan) VALUES(?1,?2,?3,?4,?5,?6)", params![x.id, x.created, x.topic, x.explanation, x.turns, x.bilan]).map_err(e)?; }
+    }
     tx.commit().map_err(e)
+}
+// Filet de sécurité : l'état actuel est copié dans le dossier de données avant d'être remplacé.
+fn safety_copy(app: &AppHandle, db: &Db) -> Result<std::path::PathBuf, String> {
+    let dir = app.path().app_data_dir().map_err(e)?;
+    fs::create_dir_all(&dir).map_err(e)?;
+    let (current, _, _, _) = full_backup_envelope(db)?;
+    let safety = dir.join(format!("avant-restauration-{}.json", now_secs()));
+    fs::write(&safety, current).map_err(e)?;
+    Ok(safety)
+}
+
+// Sauvegarde dans un fichier choisi par l'utilisateur : notes, cours, rappels, séances d'Explique-moi (pas les fichiers audio).
+#[tauri::command]
+fn export_backup(_app: AppHandle, db: State<'_, Db>, path: String) -> Result<String, String> {
+    let p = std::path::PathBuf::from(path);
+    if p.as_os_str().is_empty() { return Err("Fichier de sauvegarde vide.".into()); }
+    let (json, _, _, _) = full_backup_envelope(&db)?;
+    fs::write(&p, json).map_err(e)?;
+    Ok(p.to_string_lossy().into_owned())
+}
+
+// Restaure depuis un fichier : renvoie le nombre d'éléments, de rappels et de séances restaurés + l'emplacement de la copie de sécurité.
+#[tauri::command]
+fn import_backup(app: AppHandle, db: State<'_, Db>, path: String) -> Result<serde_json::Value, String> {
+    let raw = fs::read_to_string(&path).map_err(|_| "Fichier de sauvegarde introuvable ou illisible.".to_string())?;
+    let b = parse_backup(&raw)?;
+    let safety = safety_copy(&app, &db)?;
+    restore_all(&db, &b)?;
+    Ok(serde_json::json!({ "items": b.items.len(), "reminders": b.reminders.as_ref().map(|x| x.len()), "explanations": b.explanations.as_ref().map(|x| x.len()), "safety": safety.to_string_lossy() }))
 }
 
 #[tauri::command]
 async fn google_backup(app: AppHandle) -> Result<serde_json::Value, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let tok = google_token()?;
-        let (body_json, ni, nr) = full_backup_envelope(&app.state::<Db>())?;
+        let (body_json, ni, nr, ne) = full_backup_envelope(&app.state::<Db>())?;
         let folder = drive_folder(&tok)?;
         let existing = drive_find(&tok, &format!("name='{DRIVE_FILE}' and '{folder}' in parents and trashed=false"))?;
         let b = "bullo_boundary_7f3a9c21";
@@ -1069,7 +1099,7 @@ async fn google_backup(app: AppHandle) -> Result<serde_json::Value, String> {
         };
         ureq::request(method, &url).set("Authorization", &format!("Bearer {tok}")).set("Content-Type", &format!("multipart/related; boundary={b}"))
             .send_bytes(body.as_bytes()).map_err(gerr)?;
-        Ok::<_, String>(serde_json::json!({ "items": ni, "reminders": nr, "when": now_secs() }))
+        Ok::<_, String>(serde_json::json!({ "items": ni, "reminders": nr, "explanations": ne, "when": now_secs() }))
     }).await.map_err(e)?
 }
 
@@ -1083,20 +1113,11 @@ async fn google_restore(app: AppHandle) -> Result<serde_json::Value, String> {
             .ok_or("Aucune sauvegarde trouvée dans le dossier Bullo de ton Drive.")?;
         let raw = ureq::get(&format!("https://www.googleapis.com/drive/v3/files/{id}")).query("alt", "media").set("Authorization", &format!("Bearer {tok}"))
             .call().map_err(gerr)?.into_string().map_err(e)?;
-        let env: BackupEnvelope = serde_json::from_str(&raw).map_err(|_| "La sauvegarde Google est illisible ou corrompue.".to_string())?;
-        if backup_hash(&env.content) != env.content_sha256 { return Err("Sauvegarde refusée : le fichier a été modifié ou est corrompu (contrôle d'intégrité SHA-256).".into()); }
-        let (items, reminders) = match serde_json::from_str::<FullBackup>(&env.content) {
-            Ok(f) => (f.items, f.reminders),
-            Err(_) => (serde_json::from_str::<Vec<Item>>(&env.content).map_err(|_| "Contenu de sauvegarde invalide.".to_string())?, vec![]),
-        };
+        let b = parse_backup(&raw)?;
         let db = app.state::<Db>();
-        // Filet de sécurité : l'état actuel est copié avant d'être remplacé.
-        let dir = app.path().app_data_dir().map_err(e)?;
-        let (current, _, _) = full_backup_envelope(&db)?;
-        let safety = dir.join(format!("avant-restauration-{}.json", now_secs()));
-        fs::write(&safety, current).map_err(e)?;
-        restore_all(&db, &items, &reminders)?;
-        Ok::<_, String>(serde_json::json!({ "items": items.len(), "reminders": reminders.len(), "safety": safety.to_string_lossy() }))
+        let safety = safety_copy(&app, &db)?;
+        restore_all(&db, &b)?;
+        Ok::<_, String>(serde_json::json!({ "items": b.items.len(), "reminders": b.reminders.as_ref().map(|x| x.len()), "explanations": b.explanations.as_ref().map(|x| x.len()), "safety": safety.to_string_lossy() }))
     }).await.map_err(e)?
 }
 

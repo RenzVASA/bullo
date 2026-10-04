@@ -20,7 +20,8 @@
   <button data-v="explain"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.6 8.6 0 0 1-3.8-.9L3 21l1.9-5.3A8.4 8.4 0 1 1 21 11.5z"/></svg><span>Explique-moi</span></button>
   <button data-v="calm"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21C7 17 4 14 4 10a4.5 4.5 0 018-2.8A4.5 4.5 0 0120 10c0 4-3 7-8 11z"/></svg><span>Bien-être</span></button>
   <div id="pill" hidden role="status"></div>
-  <button id="me" data-v="settings" class="ghost" style="margin-top:auto"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg><span>Réglages</span></button>
+  <button id="liteBtn" class="ghost" type="button" aria-pressed="false" style="margin-top:auto"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>Mode épuré</span></button>
+  <button id="me" data-v="settings" class="ghost"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg><span>Réglages</span></button>
 </nav>
 <main id="main"></main>
 <section id="bgbar" aria-label="Fond sonore">
@@ -42,7 +43,7 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "
 const errText = x => (x && x.message) ? x.message : String(x);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const main = $("#main");
-const APP_VERSION = "1.4.0", ABOUT_CREDIT = "Vibe codé par Renz-VASA, avec un peu d’intelligence artificielle ✨";
+const APP_VERSION = "1.5.0", ABOUT_CREDIT = "Vibe codé par Renz-VASA, avec un peu d’intelligence artificielle ✨";
 
 // Clés de stockage locales (préfixe bullo_). Les anciennes clés de la version précédente sont migrées une seule fois, puis supprimées.
 const KEYS = { cfg: "bullo_cfg", tags: "bullo_tags", vers: "bullo_note_versions", draft: "bullo_draft", focus: "bullo_focus", pom: "bullo_pom_enabled", googleWhen: "bullo_google_when" };
@@ -252,6 +253,9 @@ function nav(v) {
   }
 }
 document.querySelectorAll("nav [data-v]").forEach(b => b.onclick = () => nav(b.dataset.v));
+// Les libellés du menu disparaissent en mode étroit ou épuré : chaque bouton garde donc un nom pour les lecteurs d’écran et une infobulle.
+document.querySelectorAll("nav button").forEach(b => { const t = b.querySelector("span")?.textContent.trim(); if (t) { b.setAttribute("aria-label", t); b.title = t; } });
+$("#liteBtn").onclick = () => { cfg.lite = !cfg.lite; applyCfg(); notice(cfg.lite ? "Mode épuré activé : moins de texte et d’éléments à l’écran." : "Mode épuré désactivé."); };
 let sizes = [18, 21, 24], si = 0;
 
 const ICON = {
@@ -792,7 +796,7 @@ const PRESETS = { essential: [], student: ["reminders", "search", "tools", "expl
 const DEF = {
   mods: Object.fromEntries(MOD_IDS.map(i => [i, true])), onboarded: false, pinHint: "",
   font: "body", size: 18, lh: 1.6, letter: 0, theme: "auto", accent: "#5b4bf5", contrast: false, colorblind: "none", soft: false, reduceMotion: false, mask: false,
-  name: "", pin: "", courses: [], hidePlayer: false, pomodoro: 25, breakMinutes: 5, ttsRate: 1, ttsVoice: "", singleTask: false, idleMinutes: 5,
+  name: "", pin: "", courses: [], hidePlayer: false, pomodoro: 25, breakMinutes: 5, ttsRate: 1, ttsVoice: "", singleTask: false, lite: false, idleMinutes: 5,
   shortcuts: { search: "Ctrl+K", capture: "Ctrl+Shift+R", read: "Alt+L", park: "Ctrl+Shift+P" }, breakEvery: 0,
   googleAuto: false, bgShuffle: false, bgFavOnly: false, bgSource: "bullo", extPref: "Music", extVolume: .7, bgSound: "rain", bgVolume: .5, bgBar: true, bgCollapsed: false, bgPauseOnRec: true, checkUpdates: true
 };
@@ -815,7 +819,7 @@ function sanitizeCfg(c) {
   if (!Array.isArray(o.courses)) o.courses = [];
   o.shortcuts = { ...DEF.shortcuts, ...(o.shortcuts && typeof o.shortcuts === "object" ? o.shortcuts : {}) };
   o.mods = Object.fromEntries(MOD_IDS.map(i => [i, !(o.mods && typeof o.mods === "object") || o.mods[i] !== false]));
-  o.onboarded = o.onboarded === true; o.pinHint = String(o.pinHint || "").slice(0, 80);
+  o.lite = o.lite === true; o.onboarded = o.onboarded === true; o.pinHint = String(o.pinHint || "").slice(0, 80);
   delete o.fontSize; delete o.pomEnabled;
   return o;
 }
@@ -892,6 +896,7 @@ function applyCfg() {
   if (pal) [acc, acc2, rec] = pal[isDark() ? "dark" : "light"]; else if (custom && !cfg.contrast) acc = cfg.accent;
   for (const [k, v] of [["--accent", acc], ["--accent2", acc2], ["--rec", rec], ["--on", acc ? (lum(acc) > .4 ? "#0d1017" : "#ffffff") : null]]) v ? r.setProperty(k, v) : r.removeProperty(k);
   document.querySelectorAll("nav [data-v]").forEach(b => { b.hidden = !modOn(b.dataset.v); });
+  document.body.classList.toggle("lite", cfg.lite); const lb = $("#liteBtn"); if (lb) lb.setAttribute("aria-pressed", String(cfg.lite));
   saveCfg(); bgUi?.();
 }
 try {
@@ -1004,6 +1009,13 @@ async function checkUpdate(manual) {
   }
   if (btn) { btn.disabled = false; btn.textContent = "Rechercher une mise à jour"; }
 }
+// Phrase de bilan d'une sauvegarde/restauration. Un compteur absent (ancienne sauvegarde) veut dire « non touché ».
+function backupSummary(r) {
+  const n = (k, one, many) => r[k] == null ? "" : `${r[k]} ${r[k] > 1 ? many : one}`;
+  const parts = [`${r.items} élément(s)`, n("reminders", "rappel", "rappels"), n("explanations", "séance d’Explique-moi", "séances d’Explique-moi")].filter(Boolean);
+  const kept = r.reminders == null || r.explanations == null ? " (ce que cette ancienne sauvegarde ne contient pas est resté tel quel)" : "";
+  return parts.join(", ") + kept;
+}
 function showUpdate(u, manual) {
   const out = $("#updMsg");
   if (u.newer) {
@@ -1093,14 +1105,14 @@ async function renderGoogle() {
   const fp = gState.has_keys ? `<p class="mute" id="gFp">🔒 Clés chiffrées dans le Trousseau macOS · empreinte SHA-256 <code>${esc(gState.fingerprint || "")}</code> ${gState.intact === false ? "⚠️ <b>modifiées ou corrompues : efface-les et recommence l’étape 5</b>" : "✅ intactes"}</p>` : "";
   const m = gMsg ? `<p class="msg ${gMsg.err ? "err" : "ok"}" role="status">${esc(gMsg.t)}</p>` : '<p class="msg" role="status"></p>';
   if (gState.connected) {
-    box.innerHTML = `<p>Connecté ✅ ${gState.email ? "<b>" + esc(gState.email) + "</b>" : ""}</p><p class="mute">Dernière sauvegarde : ${esc(gFmt(gWhen()))}. Fichier : Drive › Bullo › bullo-sauvegarde.json (notes, cours, rappels ; pas les fichiers audio).</p>${fp}
+    box.innerHTML = `<p>Connecté ✅ ${gState.email ? "<b>" + esc(gState.email) + "</b>" : ""}</p><p class="mute">Dernière sauvegarde : ${esc(gFmt(gWhen()))}. Fichier : Drive › Bullo › bullo-sauvegarde.json (notes, cours, rappels, séances d’Explique-moi ; pas les fichiers audio).</p>${fp}
       <div class="row"><button class="primary" id="gBackup">Sauvegarder maintenant</button><button class="ghost danger" id="gRestore">Restaurer depuis Google</button></div>
       <label class="chk"><input type="checkbox" id="gAuto" ${cfg.googleAuto ? "checked" : ""}> Sauvegarder automatiquement après chaque cours enregistré</label>
       <div class="row"><button class="ghost" id="gOut">Se déconnecter</button><button class="ghost" id="gWipe">Effacer mes clés</button></div>${m}`;
   } else if (gState.has_keys) {
     box.innerHTML = `<p>Tes clés sont rangées dans le Trousseau du Mac 🔒. Il reste à autoriser Bullo.</p>${fp}<div class="row"><button class="primary" id="gGo">Se connecter à Google</button><button class="ghost" id="gWipe">Effacer mes clés</button></div>${m}`;
   } else {
-    box.innerHTML = `<p>Sauvegarde tes notes, cours et rappels dans <b>ton</b> Google Drive. Il faut une fois créer une clé gratuite chez Google ; Bullo te guide pas à pas (environ 5 minutes).</p><div class="row"><button class="primary" id="gTuto">Démarrer le tutoriel</button></div>${m}`;
+    box.innerHTML = `<p>Sauvegarde tes notes, cours, rappels et séances d’Explique-moi dans <b>ton</b> Google Drive. Il faut une fois créer une clé gratuite chez Google ; Bullo te guide pas à pas (environ 5 minutes).</p><div class="row"><button class="primary" id="gTuto">Démarrer le tutoriel</button></div>${m}`;
   }
   const on = (id, f) => { const el = $(id, box); if (el) el.onclick = f; };
   on("#gTuto", () => gWizard(0)); on("#gGo", () => gWizard(5));
@@ -1112,14 +1124,14 @@ async function renderGoogle() {
 }
 async function gDoBackup(silent) {
   if (gBusy) return; gBusy = true; const b = $("#gBackup"); if (b) { b.disabled = true; b.textContent = "Envoi…"; }
-  try { const r = await invoke("google_backup"); try { localStorage.setItem(KEYS.googleWhen, String(r.when || Math.floor(Date.now() / 1000))); } catch {} gMsg = { t: `Sauvegardé : ${r.items} élément(s), ${r.reminders} rappel(s).` }; if (silent === true) notice("Sauvegarde Google faite ✅"); }
+  try { const r = await invoke("google_backup"); try { localStorage.setItem(KEYS.googleWhen, String(r.when || Math.floor(Date.now() / 1000))); } catch {} gMsg = { t: "Sauvegardé : " + backupSummary(r) + "." }; if (silent === true) notice("Sauvegarde Google faite ✅"); }
   catch (er) { gMsg = { t: errText(er), err: 1 }; if (silent === true) notice("Sauvegarde Google impossible : " + errText(er), true); }
   gBusy = false; renderGoogle();
 }
 function googleAutoBackup() { if (cfg.googleAuto) gDoBackup(true).catch(() => {}); }
 async function gDoRestore() {
   if (gBusy) return; gBusy = true; const b = $("#gRestore"); if (b) { b.disabled = true; b.textContent = "Restauration…"; }
-  try { const r = await invoke("google_restore"); gMsg = { t: `Restauré : ${r.items} élément(s), ${r.reminders} rappel(s). Copie de sécurité de l’ancien contenu : ${r.safety}` }; }
+  try { const r = await invoke("google_restore"); gMsg = { t: "Restauré : " + backupSummary(r) + ". Copie de sécurité de l’ancien contenu : " + r.safety }; }
   catch (er) { gMsg = { t: errText(er), err: 1 }; }
   gBusy = false; renderGoogle();
 }
@@ -1197,7 +1209,7 @@ function settings() {
     <div class="row"><button class="ghost" id="diag">Lancer le diagnostic</button><button class="ghost" id="diagKey">Tester la touche lecture/pause</button></div>
     <pre id="diagOut" class="diag" hidden></pre><div class="row"><button class="ghost sm" id="diagCopy" hidden>Copier le résultat</button></div><p class="msg" id="diagMsg" role="status"></p></section>
   <section data-cat="audio" class="card" id="favCard">${favsHtml()}</section>
-  <section data-cat="comfort" class="card"><h2>Confort et concentration</h2>${chk("singleTask", "Mode une seule tâche (Accueil)")}${chk("hidePlayer", "Masquer le lecteur audio dans les cours")}
+  <section data-cat="comfort" class="card"><h2>Confort et concentration</h2>${chk("lite", "Mode épuré : menu en icônes, sans textes d’aide, sans lecteur de sons ni bandeaux (aussi dans le menu)")}${chk("singleTask", "Mode une seule tâche (Accueil)")}${chk("hidePlayer", "Masquer le lecteur audio dans les cours")}
     <label>Rappel d’inactivité (minutes, 0 = désactivé)<input type="number" min="0" max="120" data-c="idleMinutes" value="${cfg.idleMinutes}"></label></section>
   <section data-cat="profile" class="card"><h2>Ce que j’affiche</h2>
     <p class="mute">Accueil, Capturer, Inbox et Réglages restent toujours là. Le reste, tu le montres ou tu le caches : rien n’est supprimé, tes données sont conservées.</p>
@@ -1213,7 +1225,7 @@ function settings() {
     <div class="row"><button class="ghost" id="pickDir">Choisir un dossier…</button><button class="ghost" id="openDir">Ouvrir le dossier</button><button class="ghost" id="checkDeps">Vérifier les outils (FFmpeg, Whisper…)</button></div><div id="install-status"></div></section>
   <section data-cat="about" class="card about"><h2>À propos</h2><div class="row" style="align-items:center;gap:14px"><img src="assets/bullo-player.png" alt="" width="56" height="56" style="border-radius:14px"><div><b>Bullo</b><br><span>${esc(ABOUT_CREDIT)}</span></div></div>
     <p>Bullo est né d’une idée simple : offrir un espace calme, inclusif et concret pour transformer un cours, une pensée ou un bruit de fond en prochaine action.</p>
-    <p class="mute">Mentions légales : Bullo est un outil local de productivité. Les données restent sur l’appareil sauf action explicite de l’utilisateur. Aucune garantie médicale ou pédagogique.</p><p class="mute" id="ver">Version …</p>
+    <p class="mute">Mentions légales : Bullo est un outil local de productivité. Les données restent sur l’appareil sauf action explicite de l’utilisateur. Aucune garantie médicale ou pédagogique.</p><p class="mute">Polices incluses : Bricolage Grotesque, Atkinson Hyperlegible et OpenDyslexic, sous licence SIL Open Font License. Les textes des licences sont dans le dossier de l’application (fonts/licences) et dans le dépôt (THIRD_PARTY_NOTICES.md).</p><p class="mute" id="ver">Version …</p>
     <div class="row"><button class="ghost" id="updBtn">Rechercher une mise à jour</button></div><p class="msg" id="updMsg" role="status"></p>
     ${chk("checkUpdates", "Vérifier les mises à jour au démarrage (une requête vers GitHub, au plus une fois par jour)")}</section>`;
 
@@ -1292,12 +1304,12 @@ function settings() {
     try { const f = e.target.files[0]; if (!f) return; const d = JSON.parse(await f.text()); if (!d || typeof d !== "object" || !d.settings) throw 0; const keepPin = cfg.pin; cfg = sanitizeCfg({ ...d.settings, pin: keepPin }); if (d.draft) localStorage.setItem(KEYS.draft, d.draft); if (d.tags && typeof d.tags === "object") { Object.assign(tagState, d.tags); saveTags(); } applyCfg(); settings(); notice("Réglages importés."); }
     catch { m.className = "msg err"; m.textContent = "Fichier invalide : choisis un export de réglages Bullo (.json)."; }
   };
-  $("#backupItems").onclick = async () => { try { const path = await invoke("pick", { kind: "save" }); const out = await invoke("export_backup", { path }); notice("Sauvegarde enregistrée : " + out); } catch (er) { if (errText(er) !== "Annulé.") notice(errText(er), true); } };
+  $("#backupItems").onclick = async () => { try { const path = await invoke("pick", { kind: "save" }); const out = await invoke("export_backup", { path }); notice("Sauvegarde enregistrée : " + out + " (notes, cours, rappels, séances d’Explique-moi ; sans les fichiers audio).", false, 8000); } catch (er) { if (errText(er) !== "Annulé.") notice(errText(er), true); } };
   const rb = $("#restoreItems");
   rb.onclick = async () => {
     if (!rb.dataset.sure) { rb.dataset.sure = 1; rb.textContent = "Sûr ? Ça remplace tout — clique encore"; setTimeout(() => { delete rb.dataset.sure; rb.textContent = "Restaurer une sauvegarde…"; }, 4000); return; }
     delete rb.dataset.sure; rb.textContent = "Restaurer une sauvegarde…";
-    try { const path = await invoke("pick", { kind: "file" }); const n = await invoke("import_backup", { path }); notice(`${n} élément(s) restauré(s).`); }
+    try { const path = await invoke("pick", { kind: "file" }); const r = await invoke("import_backup", { path }); notice("Restauré : " + backupSummary(r) + (r.safety ? ". Copie de sécurité de l’ancien contenu : " + r.safety : ""), false, 10000); if (view === "settings") settings(); }
     catch (er) { if (errText(er) !== "Annulé.") notice(errText(er), true); }
   };
   // --- Raccourcis ---

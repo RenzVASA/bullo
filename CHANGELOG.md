@@ -2,6 +2,19 @@
 
 Format : une section par version, la plus récente en haut.
 
+## 1.5.0 — 2026-10-04
+
+### Nouveautés
+- **Mode épuré** : un bouton « Mode épuré » dans le menu (et une case dans Réglages › Confort) réduit le menu à des icônes et retire les textes d'aide, le lecteur de sons et les bandeaux. Tes notes et tes contenus ne changent pas.
+- **Sauvegarde complète** : les sauvegardes (fichier et Google Drive) contiennent maintenant aussi tes séances d'**Explique-moi**, en plus des notes, cours et rappels. Les fichiers audio restent hors sauvegarde. Avant toute restauration, l'état actuel est copié (`avant-restauration-….json`), et une ancienne sauvegarde ne supprime plus les rappels ni les séances qu'elle ne contient pas.
+
+### Légal et accessibilité
+- **Licences des polices** : les textes de la licence SIL OFL de Bricolage Grotesque, Atkinson Hyperlegible et OpenDyslexic sont maintenant fournis avec l'application (`src/fonts/licences/`) et listés dans `THIRD_PARTY_NOTICES.md`. Une mention est ajoutée dans Réglages › À propos.
+- **Boutons du menu nommés pour les lecteurs d'écran** : en fenêtre étroite ou en mode épuré, les libellés disparaissent ; chaque bouton garde maintenant un nom accessible et une infobulle.
+
+### À savoir
+- Les mises à jour signées de la 1.4.0 sont utilisées pour la première fois avec cette version : si l'installation en un clic échoue, le message l'explique et le téléchargement manuel reste proposé.
+
 ## 1.4.0 — 2026-10-04
 
 ### Sécurité
