@@ -107,7 +107,7 @@ Sans ce fichier, Bullo utilise son logo vectoriel `src/bullo-logo.svg` (pas de �
 - `FOCUSFLOW_*` (variables) et `~/.focusflow/` ne sont lus qu'en repli, pour ne pas casser une ancienne installation. Les anciens réglages de l'interface (`ff_*`) sont migrés automatiquement vers `bullo_*`.
 
 ### Structure
-- `src/index.html` : interface (Accueil, Capturer, Inbox, Rappels, Rechercher, Outils, Explique-moi, Bien-être, Réglages, barre Fond sonore)
+- `src/index.html` : interface (Accueil, Capturer, Inbox, Rappels, Rechercher, Outils, Explique-moi, Réviser, Bien-être, Réglages, barre Fond sonore) ; `src/quick.html` : petite fenêtre « Note rapide » de la barre de menus
 - `src/style.css` : styles, thèmes, contraste élevé · `src/fonts/` : polices embarquées
 - `src-tauri/src/main.rs` : SQLite, audio, transcription, résumé, rappels et notifications, exports
 - `scripts/` : `check-frontend.js` (`npm run build`), `generate-logo-variants.js`
@@ -141,7 +141,13 @@ Onglet **Bien-être** : parking de pensées (Ctrl+Maj+P depuis n'importe où : t
 Le bouton « Mode épuré » du menu (ou Réglages › Confort) réduit le menu à des icônes et masque les textes d'aide, le lecteur de sons et les bandeaux, pour les jours où l'écran est trop chargé. Aucun contenu n'est touché.
 
 ### Premier lancement et modules
-Au premier lancement, Bullo propose en 3 étapes (toutes facultatives) : un prénom, ce qu'on veut afficher (Rappels, Rechercher, Outils, Explique-moi, Bien-être peuvent être masqués), et un code d'accès avec indice. Tout se change ensuite dans Réglages > Profil. Il n'y a pas de compte en ligne : le profil et le code restent sur l'ordinateur, et le code protège la discrétion, il ne chiffre pas les notes.
+Au premier lancement, Bullo propose en 3 étapes (toutes facultatives) : un prénom, ce qu'on veut afficher (Rappels, Rechercher, Outils, Explique-moi, Réviser, Bien-être peuvent être masqués), et un code d'accès avec indice. Tout se change ensuite dans Réglages > Profil. Il n'y a pas de compte en ligne : le profil et le code restent sur l'ordinateur, et le code protège la discrétion, il ne chiffre pas les notes.
+
+### Barre de menus (Mac)
+Une icône Bullo en haut de l'écran permet d'enregistrer, d'écrire une note rapide ou de poser une pensée sans ouvrir la fenêtre. Fermer la fenêtre garde Bullo dans la barre de menus (désactivable dans Réglages › Confort).
+
+### Réviser (cartes + répétition espacée)
+Depuis un cours ou une note, l'IA locale (Ollama) propose des cartes question/réponse ; tu les relis et gardes celles qui sont justes. Bullo te les repose à 1, 3, 7, 14 puis 30 jours (système de Leitner), par séances de 10 cartes. Tout reste sur l'ordinateur et fait partie des sauvegardes.
 
 ### Explique-moi (méthode Feynman)
 Onglet **Explique-moi** : tu indiques un sujet et tu l'expliques avec tes mots, à l'écrit ou à l'oral (la dictée utilise la transcription locale de Bullo). Un « élève curieux de 12 ans », porté par Ollama en local, te pose 1 à 3 questions sur ce qui manque, **sans jamais donner la réponse**. L'échange dure 3 séries au maximum, puis Bullo fait un bilan très court : ce qui est solide, et les sujets à revoir. Tu peux t'arrêter à tout moment. Rien ne démarre tout seul. Les séances sont gardées dans « Mes explications » (sur ton ordinateur uniquement). Il faut qu'Ollama soit ouvert et que le modèle de résumé soit téléchargé (Réglages > Vérifier les outils). Le texte de la consigne donnée au modèle est la constante `EXPLAIN_PROMPT` en haut de la section « Explique-moi » de `src-tauri/src/main.rs`. Un petit modèle local peut parfois laisser échapper une réponse malgré la consigne.
@@ -151,7 +157,7 @@ Réglages > Google Drive > « Démarrer le tutoriel » : 6 étapes dans l'appli 
 - Une **empreinte SHA-256** des clés est calculée à l'enregistrement et vérifiée à chaque lecture : si les clés sont modifiées ou corrompues, Bullo le signale (⚠️) et refuse de se connecter. L'empreinte est affichée dans Réglages ; la clé elle-même ne l'est jamais.
 - Les clés sont **chiffrées dans le Trousseau macOS** (pas de hachage : Bullo doit pouvoir les relire). Elles ne sont jamais écrites dans un fichier ni dans les réglages.
 - Connexion OAuth 2.0 avec PKCE sur une adresse locale (127.0.0.1), accès limité aux fichiers créés par Bullo.
-- Sauvegarde : Drive › Bullo › `bullo-sauvegarde.json` (notes, cours, rappels, séances d'Explique-moi ; pas les fichiers audio), avec contrôle d'intégrité SHA-256. Restauration avec copie de sécurité `avant-restauration-….json` dans le dossier de données de Bullo. Option de sauvegarde automatique après chaque cours.
+- Sauvegarde : Drive › Bullo › `bullo-sauvegarde.json` (notes, cours, rappels, séances d'Explique-moi, cartes de révision ; pas les fichiers audio), avec contrôle d'intégrité SHA-256. Restauration avec copie de sécurité `avant-restauration-….json` dans le dossier de données de Bullo. Option de sauvegarde automatique après chaque cours.
 - Si Google affiche « n'a pas validé cette appli » : Paramètres avancés > Accéder à Bullo. Si l'appli reste en mode Test, Google peut couper l'accès après environ 7 jours : publie-la en Production ou reconnecte-toi.
 
 

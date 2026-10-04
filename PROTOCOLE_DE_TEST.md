@@ -109,6 +109,16 @@ Avec **Ollama fermé** :
 - [ ] « Commencer » affiche « Cette fonctionnalité a besoin d'Ollama. Ouvre l'application Ollama, puis réessaie. », rien ne plante, ton texte est conservé.
 - [ ] Après avoir ouvert Ollama, « Commencer » fonctionne sans retaper.
 
+## 5 quaterdecies — Barre de menus et Réviser (v1.6.0)
+- [ ] Une icône Bullo apparaît en haut à droite du Mac (claire sur barre sombre, sombre sur barre claire). Le menu propose les 5 actions.
+- [ ] « Note rapide… » : petite fenêtre au premier plan ; écrire, Entrée → la note est dans l'Inbox. Échap ferme sans rien enregistrer. Idem « Poser une pensée… » (titre commençant par 💭).
+- [ ] « Enregistrer » : l'enregistrement démarre même fenêtre Bullo fermée (à noter : le Mac peut demander l'autorisation du micro), l'icône affiche « ● REC », le menu propose « Arrêter l'enregistrement ».
+- [ ] Fermer la fenêtre (rouge) : Bullo reste dans la barre de menus ; clic sur le Dock ou « Ouvrir Bullo » la rouvre. « Quitter Bullo » ferme tout.
+- [ ] Réglages › Confort : décocher « Garder Bullo dans la barre de menus » → fermer la fenêtre quitte l'application.
+- [ ] Ollama ouvert, sur un vrai cours (résumé fait) : « Créer des cartes » → des cartes justes, modifiables ; garder ; Réviser › À revoir › Commencer. Réponse ratée → la carte revient dans la séance.
+- [ ] Ollama fermé : message clair, texte conservé.
+- [ ] Sauvegarder, supprimer des cartes, restaurer : elles reviennent.
+
 ## 5 terdecies — Mode épuré, sauvegarde complète, licences (v1.5.0)
 - [ ] Menu › « Mode épuré » : le menu passe en icônes, les textes d'aide et le lecteur de sons disparaissent ; un second clic remet tout. Les notes sont intactes.
 - [ ] Faire une séance Explique-moi, puis Réglages › Données › Sauvegarder (fichier). Effacer la séance, restaurer : la séance est de retour, avec la copie de sécurité annoncée.

@@ -43,6 +43,8 @@ Le Rust ne peut pas être compilé dans l'environnement de construction (le regi
 | Écran de bienvenue, modules masquables, code d'accès avec indice (v1.3) | Fait (simulé) | Prénom, choix des modules, code facultatif. Pas de compte en ligne ; le code ne chiffre pas les notes |
 | Résumé IA des longs textes (v1.3.2) | À valider sur Mac | Fenêtre de lecture adaptée et découpage au-delà de ~40 000 caractères. À essayer avec un vrai cours de plusieurs minutes |
 | Sauvegarde complète (v1.5) | Fait (simulé) / À valider sur Mac | Notes, cours, rappels et séances d'Explique-moi, avec copie de sécurité avant restauration ; pas les fichiers audio. Rust non compilé ici |
+| Barre de menus Mac (v1.6) | Interface testée (simulé) / **Rust non compilé ici : à valider sur Mac** | Icône, 5 actions, petite fenêtre, rester dans la barre en fermant ; enregistrer fenêtre cachée à vérifier |
+| Réviser : cartes + répétition (v1.6) | Fait (simulé) / À valider avec Ollama sur un vrai cours | Génération par IA locale, relecture avant d'enregistrer, Leitner 1-3-7-14-30 j, sauvegardes |
 | Mode épuré (v1.5) | Fait (simulé) | Menu en icônes, sans textes d'aide ni lecteur de sons |
 | Accessibilité (noms accessibles, clavier) | Fait (contrôle automatique) | Aucun essai avec VoiceOver à ce jour |
 | Licences des polices (v1.5) | Fait | Textes SIL OFL dans `src/fonts/licences/`, voir `THIRD_PARTY_NOTICES.md` |

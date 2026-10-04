@@ -4,7 +4,7 @@ use rusqlite::{params, params_from_iter, Connection};
 use serde::{Serialize, Deserialize};
 use sha2::{Digest, Sha256};
 use std::{fs, io::{Read, Write}, net::TcpListener, process::Command, sync::{atomic::{AtomicBool, Ordering}, Mutex}, time::{Duration, Instant, SystemTime, UNIX_EPOCH}};
-use tauri::{ipc::{InvokeBody, Request}, AppHandle, Manager, State};
+use tauri::{ipc::{InvokeBody, Request}, menu::{Menu, MenuItem, PredefinedMenuItem}, tray::{TrayIcon, TrayIconBuilder}, AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
 
 struct Db(Mutex<Connection>);
 
@@ -296,6 +296,96 @@ async fn explain_list(db: State<'_, Db>) -> Result<Vec<Explanation>, String> {
 #[tauri::command]
 async fn explain_delete(db: State<'_, Db>, id: i64) -> Result<(), String> {
     db.0.lock().map_err(e)?.execute("DELETE FROM explanations WHERE id=?1", params![id]).map_err(e)?;
+    Ok(())
+}
+
+// ===== Révision : cartes question/réponse fabriquées par l'IA locale, revues à intervalles croissants (système de Leitner) =====
+// Niveau 0 = nouvelle carte ou carte ratée (à revoir tout de suite) ; chaque bonne réponse monte d'un niveau et espace la prochaine révision.
+const CARD_DAYS: [i64; 5] = [1, 3, 7, 14, 30];
+// (niveau, échéance) après une réponse. Une échéance d'un jour est comptée 12 h plus tôt : la carte est là le lendemain matin, pas l'après-midi.
+fn leitner(level: i64, ok: bool, now: i64) -> (i64, i64) {
+    if !ok { return (0, now); }
+    let lv = (level.max(0) + 1).min(CARD_DAYS.len() as i64);
+    (lv, now + CARD_DAYS[(lv - 1) as usize] * 86_400 - 43_200)
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+struct Card { id: i64, created: String, source: Option<i64>, course: String, front: String, back: String, level: i64, due: i64, reps: i64, lapses: i64 }
+#[derive(Deserialize)]
+struct NewCard { front: String, back: String }
+
+const CARDS_COLS: &str = "id,created,source,course,front,back,level,due,reps,lapses";
+fn card_row(r: &rusqlite::Row) -> rusqlite::Result<Card> {
+    Ok(Card { id: r.get(0)?, created: r.get(1)?, source: r.get(2)?, course: r.get(3)?, front: r.get(4)?, back: r.get(5)?, level: r.get(6)?, due: r.get(7)?, reps: r.get(8)?, lapses: r.get(9)? })
+}
+fn cards_all(db: &Db) -> Result<Vec<Card>, String> {
+    let c = db.0.lock().map_err(e)?;
+    let mut s = c.prepare(&format!("SELECT {CARDS_COLS} FROM cards ORDER BY id")).map_err(e)?;
+    let rows = s.query_map([], card_row).map_err(e)?;
+    let out = rows.collect::<Result<Vec<_>, _>>().map_err(e)?; Ok(out)
+}
+
+// Demande des cartes à Ollama (texte découpé comme pour le résumé). Renvoie les objets bruts : l'interface les nettoie et l'élève choisit lesquels garder.
+#[tauri::command]
+async fn cards_generate(title: String, text: String, count: u32) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        if text.trim().chars().count() < 80 { return Err("Ce texte est trop court pour en faire des cartes.".into()); }
+        let model = ollama_model();
+        let count = count.clamp(3, 20) as usize;
+        let pieces: Vec<String> = split_text(&text, OLLAMA_CHUNK).into_iter().take(3).collect();
+        let per = (count + pieces.len() - 1) / pieces.len();
+        let title: String = title.chars().take(120).collect();
+        let agent = ureq::AgentBuilder::new().timeout(std::time::Duration::from_secs(600)).build();
+        let mut all: Vec<serde_json::Value> = Vec::new();
+        for piece in &pieces {
+            let prompt = format!(
+                "Tu aides un élève à réviser. À partir du cours ci-dessous (titre : « {title} »), écris {per} cartes de révision en français. \
+                 Chaque carte a une question courte et précise, et une réponse correcte d'une ou deux phrases très simples, tirée UNIQUEMENT du texte. \
+                 Une seule idée par carte. N'invente rien. Réponds uniquement en JSON, sous la forme {{\"cartes\":[{{\"question\":\"...\",\"reponse\":\"...\"}}]}}.\n\nCours :\n{piece}");
+            let r: serde_json::Value = agent.post("http://localhost:11434/api/generate")
+                .send_json(serde_json::json!({ "model": model, "prompt": prompt, "stream": false, "format": "json", "keep_alive": "30s",
+                    "options": { "num_ctx": ollama_ctx(piece.chars().count()), "num_predict": 2048 } }))
+                .map_err(|er| ollama_err(&model, er))?
+                .into_json().map_err(e)?;
+            let v: serde_json::Value = serde_json::from_str(r["response"].as_str().unwrap_or("{}")).unwrap_or(serde_json::Value::Null);
+            let list = if v.is_array() { v.as_array().cloned() } else { v["cartes"].as_array().cloned().or_else(|| v["cards"].as_array().cloned()) };
+            all.extend(list.unwrap_or_default());
+        }
+        if all.is_empty() { return Err("Le modèle n'a pas réussi à fabriquer de cartes. Réessaie, ou colle un passage plus court du cours.".into()); }
+        Ok(serde_json::Value::Array(all))
+    }).await.map_err(e)?
+}
+
+#[tauri::command]
+async fn cards_add(db: State<'_, Db>, source: Option<i64>, course: String, cards: Vec<NewCard>) -> Result<usize, String> {
+    if cards.is_empty() || cards.len() > 200 { return Err("Aucune carte à enregistrer.".into()); }
+    let mut c = db.0.lock().map_err(e)?; let tx = c.transaction().map_err(e)?;
+    let mut n = 0;
+    for k in &cards {
+        let (f, b) = (k.front.trim(), k.back.trim());
+        if f.is_empty() || b.is_empty() { continue; }
+        tx.execute("INSERT INTO cards(source,course,front,back,due) VALUES(?1,?2,?3,?4,0)", params![source, course.chars().take(120).collect::<String>(), f.chars().take(600).collect::<String>(), b.chars().take(1200).collect::<String>()]).map_err(e)?;
+        n += 1;
+    }
+    tx.commit().map_err(e)?;
+    Ok(n)
+}
+
+#[tauri::command]
+async fn cards_list(db: State<'_, Db>) -> Result<Vec<Card>, String> { cards_all(&db) }
+
+#[tauri::command]
+async fn cards_review(db: State<'_, Db>, id: i64, ok: bool) -> Result<Card, String> {
+    let c = db.0.lock().map_err(e)?;
+    let cur: Card = c.query_row(&format!("SELECT {CARDS_COLS} FROM cards WHERE id=?1"), params![id], card_row).map_err(|_| "Cette carte n'existe plus.".to_string())?;
+    let (level, due) = leitner(cur.level, ok, now_secs());
+    c.execute("UPDATE cards SET level=?2, due=?3, reps=reps+1, lapses=lapses+?4 WHERE id=?1", params![id, level, due, if ok { 0 } else { 1 }]).map_err(e)?;
+    Ok(Card { level, due, reps: cur.reps + 1, lapses: cur.lapses + if ok { 0 } else { 1 }, ..cur })
+}
+
+#[tauri::command]
+async fn cards_delete(db: State<'_, Db>, id: i64) -> Result<(), String> {
+    db.0.lock().map_err(e)?.execute("DELETE FROM cards WHERE id=?1", params![id]).map_err(e)?;
     Ok(())
 }
 
@@ -1005,7 +1095,7 @@ fn drive_folder(tok: &str) -> Result<String, String> {
 
 // Contenu d'une sauvegarde : notes et cours, rappels, séances d'« Explique-moi ». Les champs absents (anciennes sauvegardes) ne touchent pas aux données actuelles.
 #[derive(Serialize, Deserialize)]
-struct FullBackup { items: Vec<Item>, #[serde(default)] reminders: Option<Vec<Reminder>>, #[serde(default)] explanations: Option<Vec<Explanation>> }
+struct FullBackup { items: Vec<Item>, #[serde(default)] reminders: Option<Vec<Reminder>>, #[serde(default)] explanations: Option<Vec<Explanation>>, #[serde(default)] cards: Option<Vec<Card>> }
 
 fn reminders_all(db: &Db) -> Result<Vec<Reminder>, String> {
     let c = db.0.lock().map_err(e)?;
@@ -1020,14 +1110,15 @@ fn explanations_all(db: &Db) -> Result<Vec<Explanation>, String> {
     let out = rows.collect::<Result<Vec<_>, _>>().map_err(e)?; Ok(out)
 }
 // (texte JSON de la sauvegarde, nb d'éléments, nb de rappels, nb de séances)
-fn full_backup_envelope(db: &Db) -> Result<(String, usize, usize, usize), String> {
+fn full_backup_envelope(db: &Db) -> Result<(String, usize, usize, usize, usize), String> {
     let items = query(db, format!("SELECT {COLS} FROM items ORDER BY id"), vec![])?;
     let reminders = reminders_all(db)?;
     let explanations = explanations_all(db)?;
-    let (ni, nr, ne) = (items.len(), reminders.len(), explanations.len());
-    let content = serde_json::to_string(&FullBackup { items, reminders: Some(reminders), explanations: Some(explanations) }).map_err(e)?;
+    let cards = cards_all(db)?;
+    let (ni, nr, ne, nc) = (items.len(), reminders.len(), explanations.len(), cards.len());
+    let content = serde_json::to_string(&FullBackup { items, reminders: Some(reminders), explanations: Some(explanations), cards: Some(cards) }).map_err(e)?;
     let env = BackupEnvelope { version: 2, content_sha256: backup_hash(&content), content };
-    Ok((serde_json::to_string(&env).map_err(e)?, ni, nr, ne))
+    Ok((serde_json::to_string(&env).map_err(e)?, ni, nr, ne, nc))
 }
 // Lit une sauvegarde (fichier ou Drive) : vérifie l'intégrité puis comprend l'ancien format (liste de notes seule) comme le nouveau.
 fn parse_backup(raw: &str) -> Result<FullBackup, String> {
@@ -1036,7 +1127,7 @@ fn parse_backup(raw: &str) -> Result<FullBackup, String> {
     if actual != env.content_sha256 { return Err("Sauvegarde refusée : le fichier a été modifié ou est corrompu (contrôle d'intégrité SHA-256).".to_string()); }
     match serde_json::from_str::<FullBackup>(&env.content) {
         Ok(f) => Ok(f),
-        Err(_) => Ok(FullBackup { items: serde_json::from_str::<Vec<Item>>(&env.content).map_err(|_| "Contenu de sauvegarde invalide.".to_string())?, reminders: None, explanations: None }),
+        Err(_) => Ok(FullBackup { items: serde_json::from_str::<Vec<Item>>(&env.content).map_err(|_| "Contenu de sauvegarde invalide.".to_string())?, reminders: None, explanations: None, cards: None }),
     }
 }
 fn restore_all(db: &Db, b: &FullBackup) -> Result<(), String> {
@@ -1051,13 +1142,17 @@ fn restore_all(db: &Db, b: &FullBackup) -> Result<(), String> {
         tx.execute("DELETE FROM explanations", []).map_err(e)?;
         for x in xs { tx.execute("INSERT INTO explanations(id,created,topic,explanation,turns,bilan) VALUES(?1,?2,?3,?4,?5,?6)", params![x.id, x.created, x.topic, x.explanation, x.turns, x.bilan]).map_err(e)?; }
     }
+    if let Some(cs) = &b.cards {
+        tx.execute("DELETE FROM cards", []).map_err(e)?;
+        for k in cs { tx.execute("INSERT INTO cards(id,created,source,course,front,back,level,due,reps,lapses) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)", params![k.id, k.created, k.source, k.course, k.front, k.back, k.level, k.due, k.reps, k.lapses]).map_err(e)?; }
+    }
     tx.commit().map_err(e)
 }
 // Filet de sécurité : l'état actuel est copié dans le dossier de données avant d'être remplacé.
 fn safety_copy(app: &AppHandle, db: &Db) -> Result<std::path::PathBuf, String> {
     let dir = app.path().app_data_dir().map_err(e)?;
     fs::create_dir_all(&dir).map_err(e)?;
-    let (current, _, _, _) = full_backup_envelope(db)?;
+    let (current, _, _, _, _) = full_backup_envelope(db)?;
     let safety = dir.join(format!("avant-restauration-{}.json", now_secs()));
     fs::write(&safety, current).map_err(e)?;
     Ok(safety)
@@ -1068,7 +1163,7 @@ fn safety_copy(app: &AppHandle, db: &Db) -> Result<std::path::PathBuf, String> {
 fn export_backup(_app: AppHandle, db: State<'_, Db>, path: String) -> Result<String, String> {
     let p = std::path::PathBuf::from(path);
     if p.as_os_str().is_empty() { return Err("Fichier de sauvegarde vide.".into()); }
-    let (json, _, _, _) = full_backup_envelope(&db)?;
+    let (json, _, _, _, _) = full_backup_envelope(&db)?;
     fs::write(&p, json).map_err(e)?;
     Ok(p.to_string_lossy().into_owned())
 }
@@ -1080,14 +1175,14 @@ fn import_backup(app: AppHandle, db: State<'_, Db>, path: String) -> Result<serd
     let b = parse_backup(&raw)?;
     let safety = safety_copy(&app, &db)?;
     restore_all(&db, &b)?;
-    Ok(serde_json::json!({ "items": b.items.len(), "reminders": b.reminders.as_ref().map(|x| x.len()), "explanations": b.explanations.as_ref().map(|x| x.len()), "safety": safety.to_string_lossy() }))
+    Ok(serde_json::json!({ "items": b.items.len(), "reminders": b.reminders.as_ref().map(|x| x.len()), "explanations": b.explanations.as_ref().map(|x| x.len()), "cards": b.cards.as_ref().map(|x| x.len()), "safety": safety.to_string_lossy() }))
 }
 
 #[tauri::command]
 async fn google_backup(app: AppHandle) -> Result<serde_json::Value, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let tok = google_token()?;
-        let (body_json, ni, nr, ne) = full_backup_envelope(&app.state::<Db>())?;
+        let (body_json, ni, nr, ne, nc) = full_backup_envelope(&app.state::<Db>())?;
         let folder = drive_folder(&tok)?;
         let existing = drive_find(&tok, &format!("name='{DRIVE_FILE}' and '{folder}' in parents and trashed=false"))?;
         let b = "bullo_boundary_7f3a9c21";
@@ -1099,7 +1194,7 @@ async fn google_backup(app: AppHandle) -> Result<serde_json::Value, String> {
         };
         ureq::request(method, &url).set("Authorization", &format!("Bearer {tok}")).set("Content-Type", &format!("multipart/related; boundary={b}"))
             .send_bytes(body.as_bytes()).map_err(gerr)?;
-        Ok::<_, String>(serde_json::json!({ "items": ni, "reminders": nr, "explanations": ne, "when": now_secs() }))
+        Ok::<_, String>(serde_json::json!({ "items": ni, "reminders": nr, "explanations": ne, "cards": nc, "when": now_secs() }))
     }).await.map_err(e)?
 }
 
@@ -1117,7 +1212,7 @@ async fn google_restore(app: AppHandle) -> Result<serde_json::Value, String> {
         let db = app.state::<Db>();
         let safety = safety_copy(&app, &db)?;
         restore_all(&db, &b)?;
-        Ok::<_, String>(serde_json::json!({ "items": b.items.len(), "reminders": b.reminders.as_ref().map(|x| x.len()), "explanations": b.explanations.as_ref().map(|x| x.len()), "safety": safety.to_string_lossy() }))
+        Ok::<_, String>(serde_json::json!({ "items": b.items.len(), "reminders": b.reminders.as_ref().map(|x| x.len()), "explanations": b.explanations.as_ref().map(|x| x.len()), "cards": b.cards.as_ref().map(|x| x.len()), "safety": safety.to_string_lossy() }))
     }).await.map_err(e)?
 }
 
@@ -1237,6 +1332,79 @@ async fn install_update(app: AppHandle) -> Result<(), String> {
     // Les notes et les réglages sont rangés à part : ils ne bougent pas.
     app.restart();
 }
+
+// ===== Barre de menus du Mac : icône Bullo avec actions rapides =====
+// Enregistrer / arrêter, note rapide, poser une pensée, ouvrir Bullo. Fermer la fenêtre peut laisser Bullo dans la barre de menus (réglage).
+struct TrayState { rec: MenuItem<tauri::Wry>, tray: TrayIcon }
+struct KeepOnClose(AtomicBool);
+
+fn show_main(app: &AppHandle) {
+    if let Some(w) = app.get_webview_window("main") { let _ = w.show(); let _ = w.unminimize(); let _ = w.set_focus(); }
+}
+
+// Petite fenêtre au premier plan, avec un seul champ. Le libellé de la fenêtre dit s'il s'agit d'une note ou d'une pensée (voir quick.html).
+fn open_quick(app: &AppHandle, label: &str, title: &str) {
+    if let Some(w) = app.get_webview_window(label) { let _ = w.set_focus(); return; }
+    let _ = WebviewWindowBuilder::new(app, label, WebviewUrl::App("quick.html".into()))
+        .title(title).inner_size(440.0, 250.0).resizable(false).always_on_top(true).center().focused(true).build();
+}
+
+fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
+    let rec = MenuItem::with_id(app, "rec", "Enregistrer", true, None::<&str>)?;
+    let note = MenuItem::with_id(app, "note", "Note rapide…", true, None::<&str>)?;
+    let park = MenuItem::with_id(app, "park", "Poser une pensée…", true, None::<&str>)?;
+    let open = MenuItem::with_id(app, "open", "Ouvrir Bullo", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quitter Bullo", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&rec, &note, &park, &PredefinedMenuItem::separator(app)?, &open, &quit])?;
+    let tray = TrayIconBuilder::with_id("bullo-tray")
+        .icon(tauri::image::Image::from_bytes(include_bytes!("../icons/tray.png"))?)
+        .icon_as_template(true)
+        .tooltip("Bullo")
+        .menu(&menu)
+        .on_menu_event(|app, ev| match ev.id().as_ref() {
+            "rec" => { let _ = app.emit_to("main", "tray-rec", ()); }
+            "note" => open_quick(app, "quick-note", "Note rapide"),
+            "park" => open_quick(app, "quick-park", "Poser une pensée"),
+            "open" => show_main(app),
+            "quit" => app.exit(0),
+            _ => {}
+        })
+        .build(app)?;
+    app.manage(TrayState { rec, tray });
+    Ok(())
+}
+
+// L'interface prévient quand l'enregistrement démarre ou s'arrête : le menu change de texte et l'icône affiche « ● REC ».
+#[tauri::command]
+fn tray_set_recording(state: State<'_, TrayState>, on: bool) -> Result<(), String> {
+    state.rec.set_text(if on { "Arrêter l'enregistrement" } else { "Enregistrer" }).map_err(e)?;
+    state.tray.set_title(if on { Some("● REC") } else { None::<&str> }).map_err(e)?;
+    Ok(())
+}
+
+// Réglage « garder Bullo dans la barre de menus quand on ferme la fenêtre ».
+#[tauri::command]
+fn tray_config(state: State<'_, KeepOnClose>, keep: bool) { state.0.store(keep, Ordering::Relaxed); }
+
+// Enregistre le texte de la petite fenêtre dans l'Inbox (une pensée garde le préfixe 💭 comme le parking de pensées de Bien-être).
+#[tauri::command]
+fn quick_add(app: AppHandle, db: State<'_, Db>, window: tauri::WebviewWindow, text: String, park: bool) -> Result<(), String> {
+    let t = text.trim();
+    if t.is_empty() { return Err("Écris quelque chose avant d'enregistrer.".into()); }
+    let max = if park { 110 } else { 120 };
+    let first: String = t.lines().next().unwrap_or("").chars().take(max).collect();
+    let multi = t.contains('\n') || t.chars().count() > max;
+    let title = if park { format!("💭 {first}") } else { first };
+    {
+        let c = db.0.lock().map_err(e)?;
+        c.execute("INSERT INTO items(kind,title,body) VALUES('note',?1,?2)", params![title, if multi { t.to_string() } else { String::new() }]).map_err(e)?;
+    }
+    let _ = app.emit_to("main", "items-changed", ());
+    let _ = window.close();
+    Ok(())
+}
+#[tauri::command]
+fn quick_close(window: tauri::WebviewWindow) { let _ = window.close(); }
 
 #[tauri::command]
 fn check_installation() -> Result<Vec<DependencyStatus>, String> {
@@ -1381,11 +1549,33 @@ fn main() {
                    id INTEGER PRIMARY KEY, created TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                    topic TEXT NOT NULL DEFAULT '', explanation TEXT NOT NULL DEFAULT '',
                    turns TEXT NOT NULL DEFAULT '[]', bilan TEXT NOT NULL DEFAULT '');")?;
+            conn.execute_batch(
+                "CREATE TABLE IF NOT EXISTS cards(
+                   id INTEGER PRIMARY KEY, created TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, source INTEGER, course TEXT NOT NULL DEFAULT '',
+                   front TEXT NOT NULL, back TEXT NOT NULL, level INTEGER NOT NULL DEFAULT 0, due INTEGER NOT NULL DEFAULT 0,
+                   reps INTEGER NOT NULL DEFAULT 0, lapses INTEGER NOT NULL DEFAULT 0);")?;
             app.manage(Db(Mutex::new(conn)));
+            app.manage(KeepOnClose(AtomicBool::new(true)));
+            // Pas d'icône dans la barre de menus ne doit jamais empêcher Bullo de démarrer.
+            if let Err(er) = setup_tray(app) { eprintln!("Barre de menus indisponible : {er}"); }
             start_reminder_watcher(app.handle().clone());
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![player_diagnostic, media_key_test, now_playing, open_web, system_audio, system_mute, system_volume, add_item, add_course, read_audio, save_download, google_status, google_save_keys, google_clear_keys, google_connect, google_cancel, google_disconnect, google_backup, google_restore, open_url, install_fonts, list_fonts, read_font, notify, media_status, media_control, media_volume, media_open, add_reminder, list_reminders, update_reminder, delete_reminder, list_items, search, set_done, delete_item, save_audio, transcribe, summarize, assist, explain_turn, explain_save, explain_list, explain_delete, export_md, pick, open_path, set_audio_dir, get_audio_dir, check_installation, check_update, install_update, install_dependency, import_text, save_course, export_backup, import_backup])
-        .run(tauri::generate_context!())
-        .expect("erreur au lancement de Bullo");
+        .on_window_event(|win, ev| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = ev {
+                let keep = win.app_handle().try_state::<KeepOnClose>().map(|k| k.0.load(Ordering::Relaxed)).unwrap_or(false);
+                let tray_ok = win.app_handle().try_state::<TrayState>().is_some();
+                if win.label() == "main" && keep && tray_ok { api.prevent_close(); let _ = win.hide(); }
+            }
+        })
+        .invoke_handler(tauri::generate_handler![player_diagnostic, media_key_test, now_playing, open_web, system_audio, system_mute, system_volume, add_item, add_course, read_audio, save_download, google_status, google_save_keys, google_clear_keys, google_connect, google_cancel, google_disconnect, google_backup, google_restore, open_url, install_fonts, list_fonts, read_font, notify, media_status, media_control, media_volume, media_open, add_reminder, list_reminders, update_reminder, delete_reminder, list_items, search, set_done, delete_item, save_audio, transcribe, summarize, assist, explain_turn, explain_save, explain_list, explain_delete, cards_generate, cards_add, cards_list, cards_review, cards_delete, export_md, pick, open_path, set_audio_dir, get_audio_dir, check_installation, check_update, install_update, tray_set_recording, tray_config, quick_add, quick_close, install_dependency, import_text, save_course, export_backup, import_backup])
+        .build(tauri::generate_context!())
+        .expect("erreur au lancement de Bullo")
+        .run(|_app, _event| {
+            // Clic sur l'icône du Dock alors que la fenêtre est cachée : on la ré-affiche.
+            #[cfg(target_os = "macos")]
+            {
+                if let tauri::RunEvent::Reopen { .. } = _event { show_main(_app); }
+            }
+        });
 }

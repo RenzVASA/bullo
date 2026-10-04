@@ -2,6 +2,19 @@
 
 Format : une section par version, la plus récente en haut.
 
+## 1.6.0 — 2026-10-04
+
+### Nouveautés
+- **Icône dans la barre de menus du Mac** (en haut, à côté de l'heure et de la batterie) avec des actions rapides : **Enregistrer / Arrêter l'enregistrement**, **Note rapide…**, **Poser une pensée…**, **Ouvrir Bullo**, **Quitter Bullo**. « Note rapide » et « Poser une pensée » ouvrent une petite fenêtre (Entrée pour valider, Échap pour fermer) ; le texte arrive dans l'Inbox. Pendant un enregistrement, l'icône affiche « ● REC ».
+- **Fermer la fenêtre ne ferme plus Bullo** : il reste dans la barre de menus (réglable dans Réglages › Confort, case « Garder Bullo dans la barre de menus »). Un clic sur l'icône du Dock rouvre la fenêtre. « Quitter Bullo » ferme vraiment l'application.
+- **Réviser** (nouveau module, masquable) : Bullo fabrique avec l'IA locale (Ollama) des cartes question/réponse à partir d'un cours ou d'une note — bouton « Créer des cartes » sur chaque cours, ou page Réviser. Tu relis, corriges ou décoches les cartes avant de les garder. Ensuite Bullo te les repose à intervalles croissants (système de Leitner : 1, 3, 7, 14 puis 30 jours ; une carte ratée revient tout de suite). Séances courtes de 10 cartes, lecture à voix haute possible, aucune « série » à maintenir.
+- Les cartes sont comprises dans les **sauvegardes** (fichier et Google Drive).
+- Une notification système prévient quand une explication ou une réponse est prête alors que la fenêtre est cachée.
+
+### À savoir
+- Cargo.lock change au premier build (nouvelles fonctions de Tauri pour la barre de menus) : à enregistrer avec le reste.
+- Version Mac uniquement ; la version Windows est un chantier à part.
+
 ## 1.5.0 — 2026-10-04
 
 ### Nouveautés

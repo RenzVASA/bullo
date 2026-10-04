@@ -18,6 +18,7 @@
   <button data-v="search"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><span>Rechercher</span></button>
   <button data-v="tools"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 6a4 4 0 005 5l-9 9a2.1 2.1 0 01-3-3l9-9z"/><path d="M14 6l-3-3"/></svg><span>Outils</span></button>
   <button data-v="explain"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.6 8.6 0 0 1-3.8-.9L3 21l1.9-5.3A8.4 8.4 0 1 1 21 11.5z"/></svg><span>Explique-moi</span></button>
+  <button data-v="revise"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="14" height="13" rx="2"/><path d="M7 8V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-2"/></svg><span>Réviser</span></button>
   <button data-v="calm"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21C7 17 4 14 4 10a4.5 4.5 0 018-2.8A4.5 4.5 0 0120 10c0 4-3 7-8 11z"/></svg><span>Bien-être</span></button>
   <div id="pill" hidden role="status"></div>
   <button id="liteBtn" class="ghost" type="button" aria-pressed="false" style="margin-top:auto"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>Mode épuré</span></button>
@@ -43,7 +44,7 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "
 const errText = x => (x && x.message) ? x.message : String(x);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const main = $("#main");
-const APP_VERSION = "1.5.0", ABOUT_CREDIT = "Vibe codé par Renz-VASA, avec un peu d’intelligence artificielle ✨";
+const APP_VERSION = "1.6.0", ABOUT_CREDIT = "Vibe codé par Renz-VASA, avec un peu d’intelligence artificielle ✨";
 
 // Clés de stockage locales (préfixe bullo_). Les anciennes clés de la version précédente sont migrées une seule fois, puis supprimées.
 const KEYS = { cfg: "bullo_cfg", tags: "bullo_tags", vers: "bullo_note_versions", draft: "bullo_draft", focus: "bullo_focus", pom: "bullo_pom_enabled", googleWhen: "bullo_google_when" };
@@ -245,7 +246,7 @@ function nav(v) {
   view = v; if (v !== "home") document.body.classList.remove("single-task-active");
   document.querySelectorAll("nav [data-v]").forEach(b => b.classList.toggle("on", b.dataset.v === v));
   br.run++;
-  try { ({ home, capture, inbox, reminders, search: searchView, tools, explain: explainView, calm, settings })[v](); }
+  try { ({ home, capture, inbox, reminders, search: searchView, tools, explain: explainView, revise: reviseView, calm, settings })[v](); }
   catch (er) {
     console.error("Erreur d’affichage (" + v + ") :", er);
     main.innerHTML = `<h1>Oups</h1><p class="msg err" role="alert">Cette page n’a pas pu s’afficher : ${esc(errText(er))}</p><p>Tes notes et tes enregistrements sont intacts. Le bouton ci-dessous efface seulement le brouillon en cours.</p><div class="row"><button class="primary" id="fixDraft">Réparer</button></div>`;
@@ -316,6 +317,7 @@ function courseCard(it) {
       ${det.length ? `<button class="ghost" data-p="det" aria-expanded="false">${ico("star")}<span>À retenir</span></button>` : ""}
       <button class="ghost" data-p="tx" aria-expanded="false">${ico("tx")}<span>Transcription</span></button>
       ${it.audio && !cfg.hidePlayer ? `<button class="ghost" data-p="au" aria-expanded="false">${ico("play")}<span>Écouter</span></button>` : ""}
+      ${modOn("revise") ? `<button class="ghost" data-rev="${it.id}">${ico("star")}<span>Créer des cartes</span></button>` : ""}
       <button class="ghost danger" data-del style="margin-left:auto">${ico("trash")}<span>Supprimer</span></button>
     </div>
     <div class="panel" data-panel="det" hidden>${det.map(([t, a]) => `<h2>${t}</h2>${li(a)}`).join("")}</div>
@@ -428,7 +430,7 @@ try {
 } catch {}
 function say(msg, err = false) { cap.msg = msg; cap.err = err; pill(); if (view === "capture") capture(); }
 // Quand une tâche de fond se termine alors qu'on est sur une autre page : on prévient, et tout est déjà sauvegardé.
-function doneElsewhere(msg, err = false) { saveDraft(); if (view !== "capture") notice(msg + (err ? "" : " Ouvre Capturer pour la voir."), err, 9000); }
+function doneElsewhere(msg, err = false) { saveDraft(); if (document.hidden && window.__TAURI__?.core) window.__TAURI__.core.invoke("notify", { title: "Bullo", body: msg }).catch(() => {}); if (view !== "capture") notice(msg + (err ? "" : " Ouvre Capturer pour la voir."), err, 9000); }
 
 function chooser() {
   return `<h2>C'était un cours de quoi ?</h2><div class="row">${cfg.courses.map(c => `<button class="primary" data-course="${esc(c)}">${esc(c)}</button>`).join("")}</div>
@@ -485,6 +487,8 @@ function capture() {
   pill();
 }
 
+// Barre de menus du Mac : le menu affiche « Arrêter l’enregistrement » et l’icône « ● REC » pendant qu’on enregistre.
+const trayRec = on => { if (window.__TAURI__?.core) window.__TAURI__.core.invoke("tray_set_recording", { on }).catch(() => {}); };
 async function toggleRec() {
   if (cap.mr) { cap.mr.stop(); return; }
   if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") return say("L’enregistrement n’est pas disponible dans cette fenêtre.", true);
@@ -494,9 +498,9 @@ async function toggleRec() {
     const mime = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find(m => MediaRecorder.isTypeSupported(m)) || "";
     const mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream), chunks = [], type = mr.mimeType || mime || "audio/webm";
     mr.ondataavailable = ev => { if (ev.data && ev.data.size) chunks.push(ev.data); };
-    mr.onerror = () => { stream.getTracks().forEach(t => t.stop()); cap.mr = null; cap.busy = ""; bgOnRecord(false); say("L’enregistrement a rencontré une erreur.", true); };
+    mr.onerror = () => { stream.getTracks().forEach(t => t.stop()); cap.mr = null; cap.busy = ""; bgOnRecord(false); trayRec(false); say("L’enregistrement a rencontré une erreur.", true); };
     mr.onstop = async () => {
-      stream.getTracks().forEach(t => t.stop()); cap.mr = null; bgOnRecord(false);
+      stream.getTracks().forEach(t => t.stop()); cap.mr = null; bgOnRecord(false); trayRec(false);
       if (!chunks.length) { cap.busy = ""; return say("Aucun son n’a été enregistré.", true); }
       cap.busy = "Transcription…";
       say("Transcription en cours… Tu peux changer d'onglet, ça continue en arrière-plan.");
@@ -507,7 +511,7 @@ async function toggleRec() {
         await transcribeAudio();
       } catch (er) { cap.busy = ""; say(errText(er), true); doneElsewhere("Enregistrement : " + errText(er), true); }
     };
-    bgOnRecord(true);
+    bgOnRecord(true); trayRec(true);
     mr.start(); cap.mr = mr; cap.t0 = Date.now(); say("Enregistrement en cours…");
   } catch (er) {
     if (stream) stream.getTracks().forEach(t => t.stop());
@@ -788,15 +792,16 @@ const MODS = [
   ["search", "Rechercher", "Retrouver une note ou un cours."],
   ["tools", "Outils", "Corriger, simplifier, découper une tâche avec l’IA locale."],
   ["explain", "Explique-moi", "Expliquer un sujet pour vérifier qu’on l’a compris."],
+  ["revise", "Réviser", "Cartes de révision fabriquées depuis tes cours, à revoir au bon moment."],
   ["calm", "Bien-être", "Respiration, pauses et moments de calme."]
 ];
 const MOD_IDS = MODS.map(m => m[0]);
 const modOn = id => !MOD_IDS.includes(id) || cfg.mods?.[id] !== false;
-const PRESETS = { essential: [], student: ["reminders", "search", "tools", "explain"], all: MOD_IDS };
+const PRESETS = { essential: [], student: ["reminders", "search", "tools", "explain", "revise"], all: MOD_IDS };
 const DEF = {
   mods: Object.fromEntries(MOD_IDS.map(i => [i, true])), onboarded: false, pinHint: "",
   font: "body", size: 18, lh: 1.6, letter: 0, theme: "auto", accent: "#5b4bf5", contrast: false, colorblind: "none", soft: false, reduceMotion: false, mask: false,
-  name: "", pin: "", courses: [], hidePlayer: false, pomodoro: 25, breakMinutes: 5, ttsRate: 1, ttsVoice: "", singleTask: false, lite: false, idleMinutes: 5,
+  name: "", pin: "", courses: [], hidePlayer: false, pomodoro: 25, breakMinutes: 5, ttsRate: 1, ttsVoice: "", singleTask: false, lite: false, keepInMenuBar: true, idleMinutes: 5,
   shortcuts: { search: "Ctrl+K", capture: "Ctrl+Shift+R", read: "Alt+L", park: "Ctrl+Shift+P" }, breakEvery: 0,
   googleAuto: false, bgShuffle: false, bgFavOnly: false, bgSource: "bullo", extPref: "Music", extVolume: .7, bgSound: "rain", bgVolume: .5, bgBar: true, bgCollapsed: false, bgPauseOnRec: true, checkUpdates: true
 };
@@ -819,7 +824,7 @@ function sanitizeCfg(c) {
   if (!Array.isArray(o.courses)) o.courses = [];
   o.shortcuts = { ...DEF.shortcuts, ...(o.shortcuts && typeof o.shortcuts === "object" ? o.shortcuts : {}) };
   o.mods = Object.fromEntries(MOD_IDS.map(i => [i, !(o.mods && typeof o.mods === "object") || o.mods[i] !== false]));
-  o.lite = o.lite === true; o.onboarded = o.onboarded === true; o.pinHint = String(o.pinHint || "").slice(0, 80);
+  o.lite = o.lite === true; o.keepInMenuBar = o.keepInMenuBar !== false; o.onboarded = o.onboarded === true; o.pinHint = String(o.pinHint || "").slice(0, 80);
   delete o.fontSize; delete o.pomEnabled;
   return o;
 }
@@ -896,6 +901,7 @@ function applyCfg() {
   if (pal) [acc, acc2, rec] = pal[isDark() ? "dark" : "light"]; else if (custom && !cfg.contrast) acc = cfg.accent;
   for (const [k, v] of [["--accent", acc], ["--accent2", acc2], ["--rec", rec], ["--on", acc ? (lum(acc) > .4 ? "#0d1017" : "#ffffff") : null]]) v ? r.setProperty(k, v) : r.removeProperty(k);
   document.querySelectorAll("nav [data-v]").forEach(b => { b.hidden = !modOn(b.dataset.v); });
+  if (window.__TAURI__?.core) window.__TAURI__.core.invoke("tray_config", { keep: cfg.keepInMenuBar }).catch(() => {});
   document.body.classList.toggle("lite", cfg.lite); const lb = $("#liteBtn"); if (lb) lb.setAttribute("aria-pressed", String(cfg.lite));
   saveCfg(); bgUi?.();
 }
@@ -1012,8 +1018,8 @@ async function checkUpdate(manual) {
 // Phrase de bilan d'une sauvegarde/restauration. Un compteur absent (ancienne sauvegarde) veut dire « non touché ».
 function backupSummary(r) {
   const n = (k, one, many) => r[k] == null ? "" : `${r[k]} ${r[k] > 1 ? many : one}`;
-  const parts = [`${r.items} élément(s)`, n("reminders", "rappel", "rappels"), n("explanations", "séance d’Explique-moi", "séances d’Explique-moi")].filter(Boolean);
-  const kept = r.reminders == null || r.explanations == null ? " (ce que cette ancienne sauvegarde ne contient pas est resté tel quel)" : "";
+  const parts = [`${r.items} élément(s)`, n("reminders", "rappel", "rappels"), n("explanations", "séance d’Explique-moi", "séances d’Explique-moi"), n("cards", "carte de révision", "cartes de révision")].filter(Boolean);
+  const kept = r.reminders == null || r.explanations == null || r.cards == null ? " (ce que cette ancienne sauvegarde ne contient pas est resté tel quel)" : "";
   return parts.join(", ") + kept;
 }
 function showUpdate(u, manual) {
@@ -1209,7 +1215,7 @@ function settings() {
     <div class="row"><button class="ghost" id="diag">Lancer le diagnostic</button><button class="ghost" id="diagKey">Tester la touche lecture/pause</button></div>
     <pre id="diagOut" class="diag" hidden></pre><div class="row"><button class="ghost sm" id="diagCopy" hidden>Copier le résultat</button></div><p class="msg" id="diagMsg" role="status"></p></section>
   <section data-cat="audio" class="card" id="favCard">${favsHtml()}</section>
-  <section data-cat="comfort" class="card"><h2>Confort et concentration</h2>${chk("lite", "Mode épuré : menu en icônes, sans textes d’aide, sans lecteur de sons ni bandeaux (aussi dans le menu)")}${chk("singleTask", "Mode une seule tâche (Accueil)")}${chk("hidePlayer", "Masquer le lecteur audio dans les cours")}
+  <section data-cat="comfort" class="card"><h2>Confort et concentration</h2>${chk("lite", "Mode épuré : menu en icônes, sans textes d’aide, sans lecteur de sons ni bandeaux (aussi dans le menu)")}${chk("keepInMenuBar", "Garder Bullo dans la barre de menus du Mac quand je ferme la fenêtre (icône en haut : enregistrer, note rapide, pensée)")}${chk("singleTask", "Mode une seule tâche (Accueil)")}${chk("hidePlayer", "Masquer le lecteur audio dans les cours")}
     <label>Rappel d’inactivité (minutes, 0 = désactivé)<input type="number" min="0" max="120" data-c="idleMinutes" value="${cfg.idleMinutes}"></label></section>
   <section data-cat="profile" class="card"><h2>Ce que j’affiche</h2>
     <p class="mute">Accueil, Capturer, Inbox et Réglages restent toujours là. Le reste, tu le montres ou tu le caches : rien n’est supprimé, tes données sont conservées.</p>
@@ -1775,6 +1781,138 @@ async function explainView() {
   main.querySelectorAll("[data-delyes]").forEach(b => b.onclick = async () => { try { await invoke("explain_delete", { id: +b.dataset.delyes }); notice("Séance supprimée."); } catch (er) { notice(errText(er), true); } ex.confirm = null; if (ex.id === +b.dataset.delyes) exReset(), ex.page = "history"; explainView(); });
 }
 
+// ===== Réviser : cartes question/réponse fabriquées par l'IA locale à partir d'un cours, revues à intervalles croissants =====
+const RV_SESSION = 10, RV_TEXT_MAX = 90000;
+const rv = { page: "today", list: null, queue: [], idx: 0, shown: false, session: false, stats: null, busy: "", err: "", draft: [], srcId: null, srcTitle: "", text: "", count: 8, confirm: null, srcs: null };
+// Nettoie ce que le modèle a répondu : accepte plusieurs noms de clés, retire les doublons et les cartes incomplètes.
+const rvNorm = raw => {
+  const seen = new Set(), out = [];
+  (Array.isArray(raw) ? raw : []).forEach(x => {
+    if (!x || typeof x !== "object") return;
+    const pick = (...ks) => { for (const k of ks) if (typeof x[k] === "string" && x[k].trim()) return x[k].trim(); return ""; };
+    const front = pick("question", "q", "front", "recto"), back = pick("reponse", "réponse", "r", "answer", "back", "verso"), key = front.toLowerCase();
+    if (!front || !back || seen.has(key)) return;
+    seen.add(key); out.push({ front: front.slice(0, 600), back: back.slice(0, 1200) });
+  });
+  return out;
+};
+const rvIsDue = (c, now = Date.now() / 1000) => c.due <= now;
+const rvNext = (cards, now = Date.now() / 1000) => {
+  const f = cards.filter(c => c.due > now).map(c => c.due).sort((a, b) => a - b)[0];
+  if (f == null) return "";
+  const days = Math.ceil((f - now) / 86400);
+  return days <= 1 ? "demain" : `dans ${days} jours`;
+};
+const rvText = it => { const d = dataOf(it); return String((d && d.transcript) || it.body || ""); };
+async function rvFromItem(id) {
+  try {
+    const it = (await invoke("list_items", { kind: null })).find(x => x.id === id);
+    if (!it) return notice("Cet élément n’existe plus.", true);
+    const t = rvText(it);
+    if (t.trim().length < 80) return notice("Ce texte est trop court pour en faire des cartes.", true);
+    Object.assign(rv, { page: "make", text: t, srcId: it.id, srcTitle: courseOf(it) || it.title || "", draft: [], err: "", session: false });
+    nav("revise");
+  } catch (er) { notice(errText(er), true); }
+}
+document.addEventListener("click", ev => { const b = ev.target.closest && ev.target.closest("[data-rev]"); if (b) rvFromItem(+b.dataset.rev); });
+function rvStart() {
+  const due = (rv.list || []).filter(c => rvIsDue(c)).sort((a, b) => a.level - b.level || a.due - b.due).slice(0, RV_SESSION);
+  if (!due.length) return;
+  Object.assign(rv, { queue: due.map(c => ({ ...c, retried: false })), idx: 0, shown: false, session: true, stats: { n: 0, ok: 0 }, err: "" });
+  reviseView();
+}
+async function rvAnswer(ok) {
+  const c = rv.queue[rv.idx]; if (!c || rv.busy) return;
+  rv.busy = "save";
+  try {
+    await invoke("cards_review", { id: c.id, ok });
+    rv.stats.n++; if (ok) rv.stats.ok++;
+    if (!ok && !c.retried) rv.queue.push({ ...c, retried: true });
+    rv.idx++; rv.shown = false; rv.err = "";
+    if (rv.idx >= rv.queue.length) { rv.session = false; rv.list = null; rv.finished = rv.stats; }
+  } catch (er) { rv.err = errText(er); }
+  rv.busy = ""; reviseView();
+}
+async function rvGenerate() {
+  const text = rv.text.trim();
+  if (text.length < 80) { rv.err = "Choisis un cours ou colle un texte un peu plus long."; return reviseView(); }
+  rv.busy = "gen"; rv.err = ""; rv.draft = []; reviseView();
+  try {
+    const raw = await invoke("cards_generate", { title: rv.srcTitle || "Cours", text, count: rv.count });
+    const cards = rvNorm(raw);
+    if (!cards.length) throw "Le modèle n’a pas rendu de cartes utilisables. Réessaie.";
+    rv.draft = cards.map(c => ({ ...c, keep: true }));
+  } catch (er) { rv.err = errText(er); }
+  rv.busy = ""; if (view === "revise") reviseView();
+}
+async function rvKeep() {
+  const cards = rv.draft.filter(c => c.keep && c.front.trim() && c.back.trim()).map(({ front, back }) => ({ front, back }));
+  if (!cards.length) { rv.err = "Coche au moins une carte à garder."; return reviseView(); }
+  try {
+    const n = await invoke("cards_add", { source: rv.srcId, course: rv.srcTitle || "", cards });
+    notice(`${n} carte${n > 1 ? "s" : ""} ajoutée${n > 1 ? "s" : ""} ✅`);
+    Object.assign(rv, { draft: [], text: "", srcId: null, srcTitle: "", err: "", page: "today", list: null, finished: null });
+  } catch (er) { rv.err = errText(er); }
+  reviseView();
+}
+async function reviseView() {
+  if (!rv.list && !rv.session) { try { rv.list = await invoke("cards_list"); } catch (er) { rv.list = []; rv.err = errText(er); } if (view !== "revise") return; }
+  if (rv.page === "make" && !rv.srcs) { try { rv.srcs = (await invoke("list_items", { kind: null })).filter(i => ["cours", "reunion", "note"].includes(i.kind) && rvText(i).trim().length >= 80); } catch { rv.srcs = []; } if (view !== "revise") return; }
+  const list = rv.list || [], now = Date.now() / 1000, due = list.filter(c => rvIsDue(c, now)), err = rv.err ? `<p class="msg err" role="alert">${esc(rv.err)}</p>` : "";
+  const tabs = rv.session ? "" : `<div class="row ex-tabs" role="group" aria-label="Pages de Réviser">${[["today", "À revoir"], ["make", "Créer des cartes"], ["all", "Mes cartes"]].map(([k, l]) => `<button class="chip ${rv.page === k ? "on" : ""}" data-rpg="${k}" aria-pressed="${rv.page === k}">${l}</button>`).join("")}</div>`;
+  let body = "";
+  if (rv.session) {
+    const c = rv.queue[rv.idx];
+    body = `<p class="mute lead" role="status">Carte ${rv.idx + 1} sur ${rv.queue.length}</p>
+      <div class="card ex-card" aria-live="polite"><p class="mute" style="margin:0">${esc(c.course || "")}</p><p class="ex-q" id="rvQ">${esc(c.front)}</p>
+      ${rv.shown ? `<hr><p class="ex-q" id="rvA">${esc(c.back)}</p>` : ""}
+      <div class="row"><button class="ghost sm" id="rvHear">🔊 Écouter</button></div>${err}
+      <div class="row">${rv.shown ? `<button class="primary" id="rvOk" ${rv.busy ? "disabled" : ""}>✅ Je savais</button><button class="ghost" id="rvKo" ${rv.busy ? "disabled" : ""}>🔁 À revoir</button>` : `<button class="primary" id="rvShow">Voir la réponse</button>`}<button class="ghost" id="rvStop" style="margin-left:auto">Arrêter</button></div></div>`;
+  } else if (rv.page === "make") {
+    const srcs = rv.srcs || [];
+    const draftHtml = rv.draft.length ? `<h2>Vérifie les cartes</h2><p class="mute lead">Une IA peut se tromper : relis, corrige ou décoche ce qui ne va pas.</p>` + rv.draft.map((c, i) => `<div class="card ex-card"><label class="chk"><input type="checkbox" data-dk="${i}" ${c.keep ? "checked" : ""}> <span>Garder cette carte</span></label>
+        <label for="df${i}">Question</label><textarea id="df${i}" rows="2" data-df="${i}">${esc(c.front)}</textarea><label for="db${i}">Réponse</label><textarea id="db${i}" rows="3" data-db="${i}">${esc(c.back)}</textarea></div>`).join("") + `<div class="row"><button class="primary" id="rvKeep">Garder ${rv.draft.filter(c => c.keep).length} carte(s)</button><button class="ghost" id="rvDrop">Tout jeter</button></div>` : "";
+    body = `<p class="mute lead">Choisis un cours ou une note : Bullo fabrique des questions-réponses avec l’IA de ton ordinateur (Ollama). Rien ne sort de ton Mac.</p>
+      <div class="card ex-card"><label for="rvSrc">Un cours ou une note</label><select id="rvSrc" ${rv.busy ? "disabled" : ""}><option value="">Choisir…</option>${srcs.map(s => `<option value="${s.id}" ${rv.srcId === s.id ? "selected" : ""}>${esc(courseOf(s) || s.title || "Note")} · ${esc(when(s.created))}</option>`).join("")}</select>
+      <label for="rvTxt">…ou le texte à réviser</label><textarea id="rvTxt" rows="6" placeholder="Colle ici un passage de cours" ${rv.busy ? "disabled" : ""}>${esc(rv.text)}</textarea>
+      ${rv.text.length > RV_TEXT_MAX ? `<p class="msg">Ce texte est très long : seul le début (environ ${RV_TEXT_MAX.toLocaleString("fr-FR")} caractères) sera utilisé.</p>` : ""}
+      <label for="rvN">Nombre de cartes</label><select id="rvN" ${rv.busy ? "disabled" : ""}>${[5, 8, 12, 20].map(n => `<option ${rv.count === n ? "selected" : ""}>${n}</option>`).join("")}</select>${err}
+      ${rv.busy === "gen" ? `<p class="msg ex-busy" role="status"><span class="spin" aria-hidden="true"></span>Bullo fabrique les cartes… ça peut prendre une minute.</p>` : ""}
+      <div class="row"><button class="primary" id="rvGen" ${rv.busy ? "disabled" : ""}>Fabriquer les cartes</button></div></div>${draftHtml}`;
+  } else if (rv.page === "all") {
+    const by = {}; list.forEach(c => (by[c.course || "Sans cours"] = by[c.course || "Sans cours"] || []).push(c));
+    body = list.length ? `<p class="mute lead">${list.length} carte${list.length > 1 ? "s" : ""} sur cet ordinateur.</p>` + Object.entries(by).map(([k, cs]) => `<h2>${esc(k)}</h2>` + cs.map(c => `<div class="card ex-item"><div class="row" style="align-items:center"><div style="flex:1"><b>${esc(c.front)}</b><div class="mute">${esc(c.back)}</div><small class="mute">Niveau ${c.level} sur 5${rvIsDue(c, now) ? " · à revoir maintenant" : ""}</small></div>
+        ${rv.confirm === c.id ? `<button class="ghost danger" data-cy="${c.id}">Confirmer</button><button class="ghost" data-cn>Annuler</button>` : `<button class="ghost danger" data-cd="${c.id}" aria-label="Supprimer la carte ${esc(c.front)}">${ico("trash")}<span>Supprimer</span></button>`}</div></div>`).join("")).join("") : `<p class="mute">Aucune carte pour l’instant. Va dans « Créer des cartes ».</p>`;
+  } else {
+    const fin = rv.finished;
+    body = (fin ? `<div class="card" role="status"><h2 style="margin-top:0">Séance terminée 🎉</h2><p>${fin.ok} carte${fin.ok > 1 ? "s" : ""} sue${fin.ok > 1 ? "s" : ""} sur ${fin.n}. Les cartes ratées reviennent plus vite.</p>${rvNext(list, now) ? `<p class="mute">Prochaine carte à revoir : ${rvNext(list, now)}.</p>` : ""}</div>` : "")
+      + (list.length ? `<div class="card"><h2 style="margin-top:0">${due.length ? `${due.length} carte${due.length > 1 ? "s" : ""} à revoir` : "Rien à revoir pour l’instant"}</h2><p class="mute">${due.length ? `Séances courtes : ${Math.min(due.length, RV_SESSION)} cartes à la fois.` : (rvNext(list, now) ? `Prochaine carte ${rvNext(list, now)}.` : "")} ${list.length} carte${list.length > 1 ? "s" : ""} en tout.</p>${err}
+        <div class="row">${due.length ? `<button class="primary" id="rvGo">Commencer (${Math.min(due.length, RV_SESSION)} cartes)</button>` : ""}</div></div>`
+        : `<div class="card"><h2 style="margin-top:0">Tes cartes de révision</h2><p class="mute">Bullo transforme un cours en questions-réponses, puis te les repose juste avant que tu les oublies. Commence par créer quelques cartes.</p>${err}<div class="row"><button class="primary" id="rvNew">Créer des cartes</button></div></div>`);
+  }
+  main.innerHTML = `<h1>Réviser</h1>${tabs}${body}`;
+  const on = (id, f) => { const el = $(id); if (el) el.onclick = f; };
+  main.querySelectorAll("[data-rpg]").forEach(b => b.onclick = async () => {
+    rv.page = b.dataset.rpg; rv.err = ""; rv.finished = null; rv.list = null; rv.srcs = null;
+    reviseView();
+  });
+  on("#rvNew", () => { $("[data-rpg=make]").click(); });
+  on("#rvGo", rvStart); on("#rvShow", () => { rv.shown = true; reviseView().then(() => { const b = $("#rvOk"); if (b) b.focus(); }); });
+  on("#rvOk", () => rvAnswer(true)); on("#rvKo", () => rvAnswer(false));
+  on("#rvStop", () => { rv.session = false; rv.list = null; rv.finished = null; reviseView(); });
+  on("#rvHear", () => { const c = rv.queue[rv.idx]; readAloud(rv.shown ? `${c.front}. ${c.back}` : c.front); });
+  on("#rvGen", rvGenerate); on("#rvKeep", rvKeep); on("#rvDrop", () => { rv.draft = []; reviseView(); });
+  const src = $("#rvSrc"); if (src) src.onchange = async () => { const it = (rv.srcs || []).find(s => s.id === +src.value); rv.srcId = it ? it.id : null; rv.srcTitle = it ? (courseOf(it) || it.title) : ""; rv.text = it ? rvText(it) : ""; reviseView(); };
+  const tx = $("#rvTxt"); if (tx) tx.oninput = () => { rv.text = tx.value; if (rv.srcId && rvText((rv.srcs || []).find(s => s.id === rv.srcId) || {}) !== tx.value) { rv.srcId = null; } };
+  const nn = $("#rvN"); if (nn) nn.onchange = () => { rv.count = +nn.value; };
+  main.querySelectorAll("[data-dk]").forEach(b => b.onchange = () => { rv.draft[+b.dataset.dk].keep = b.checked; const k = $("#rvKeep"); if (k) k.textContent = `Garder ${rv.draft.filter(c => c.keep).length} carte(s)`; });
+  main.querySelectorAll("[data-df]").forEach(b => b.oninput = () => { rv.draft[+b.dataset.df].front = b.value; });
+  main.querySelectorAll("[data-db]").forEach(b => b.oninput = () => { rv.draft[+b.dataset.db].back = b.value; });
+  main.querySelectorAll("[data-cd]").forEach(b => b.onclick = () => { rv.confirm = +b.dataset.cd; reviseView(); });
+  main.querySelectorAll("[data-cn]").forEach(b => b.onclick = () => { rv.confirm = null; reviseView(); });
+  main.querySelectorAll("[data-cy]").forEach(b => b.onclick = async () => { try { await invoke("cards_delete", { id: +b.dataset.cy }); notice("Carte supprimée."); } catch (er) { notice(errText(er), true); } rv.confirm = null; rv.list = null; reviseView(); });
+}
+
 // Proposition discrète en fin de session de travail (Pomodoro) : un bouton, rien ne s'ouvre tout seul.
 function exBanner() {
   if ($("#exBanner")) return;
@@ -1808,6 +1946,14 @@ function searchView() {
     run();
   });
   run();
+}
+// Actions venant de la barre de menus (enregistrer, note ajoutée depuis la petite fenêtre).
+if (window.__TAURI__?.event) {
+  window.__TAURI__.event.listen("tray-rec", () => { if ($("#lock")) return notice("Déverrouille Bullo pour enregistrer.", true); toggleRec(); });
+  window.__TAURI__.event.listen("items-changed", () => {
+    const f = document.activeElement, typing = f && /^(TEXTAREA|INPUT)$/.test(f.tagName) && f.value;
+    if (!typing && ["home", "inbox", "search"].includes(view)) nav(view); else notice("Une note vient d’être ajoutée dans l’Inbox.");
+  });
 }
 ttsInit(); bgInit(); applyCfg(); pomWidget(); lock(); if (!cfg.onboarded) welcome(); setTimeout(pollReminders, 1500); setTimeout(startupUpdateCheck, 4000);
 nav("home");

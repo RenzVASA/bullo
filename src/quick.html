@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bullo</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  body{display:block;padding:18px;min-height:100vh;overflow:hidden}
+  h1{font-size:1.25rem;margin:0 0 10px;letter-spacing:-.02em}
+  textarea{width:100%;min-height:96px;resize:none;box-sizing:border-box}
+  .row{margin-top:12px;display:flex;gap:10px;align-items:center}
+  .msg{margin:8px 0 0;min-height:1.2em}
+  small.mute{margin-left:auto}
+</style>
+</head>
+<body>
+<h1 id="t">Note rapide</h1>
+<label for="q" class="mute" id="hint">Écris, puis valide : c’est rangé dans l’Inbox.</label>
+<textarea id="q" autofocus></textarea>
+<p class="msg err" id="err" role="alert"></p>
+<div class="row"><button class="primary" id="ok" type="button">Enregistrer</button><button class="ghost" id="no" type="button">Annuler</button><small class="mute">Entrée : valider · Échap : fermer</small></div>
+<script>
+// Même thème que la fenêtre principale (les deux fenêtres partagent les réglages enregistrés).
+try { const c = JSON.parse(localStorage.getItem("bullo_cfg")) || {}; const R = document.documentElement; if (["light", "dark"].includes(c.theme)) R.dataset.theme = c.theme; if (c.contrast) R.classList.add("hc"); if (c.size) document.body.style.fontSize = Math.min(24, Math.max(14, +c.size || 18)) + "px"; } catch {}
+const label = (window.__TAURI_INTERNALS__ && window.__TAURI_INTERNALS__.metadata && window.__TAURI_INTERNALS__.metadata.currentWindow && window.__TAURI_INTERNALS__.metadata.currentWindow.label) || "quick-note";
+const park = label === "quick-park";
+const $ = s => document.querySelector(s), invoke = (c, a) => window.__TAURI__.core.invoke(c, a);
+if (park) { $("#t").textContent = "Poser une pensée"; $("#hint").textContent = "Qu’est-ce qui te traverse l’esprit ? Je le garde pour plus tard."; document.title = "Poser une pensée"; }
+const send = async () => {
+  const text = $("#q").value; $("#err").textContent = "";
+  if (!text.trim()) { $("#err").textContent = "Écris quelque chose avant d’enregistrer."; return; }
+  $("#ok").disabled = true;
+  try { await invoke("quick_add", { text, park }); }
+  catch (er) { $("#ok").disabled = false; $("#err").textContent = typeof er === "string" ? er : (er && er.message) || "Enregistrement impossible."; }
+};
+$("#ok").onclick = send; $("#no").onclick = () => invoke("quick_close").catch(() => window.close());
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") { e.preventDefault(); $("#no").click(); }
+  else if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+});
+$("#q").focus();
+</script>
+</body>
+</html>
